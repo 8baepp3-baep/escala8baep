@@ -26,3 +26,28 @@ async function testarSupabase() {
 }
 
 testarSupabase();
+
+function verTela(idTela) {
+
+    document
+        .querySelectorAll('.page')
+        .forEach(pagina => {
+
+            pagina.classList.remove('active');
+
+        });
+
+    const tela = document.getElementById(idTela);
+
+    if (tela) {
+
+        tela.classList.add('active');
+
+    }
+}
+
+function inicializarSistema() {
+
+    console.log('Sistema inicializado');
+
+}
