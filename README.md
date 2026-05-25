@@ -1,0 +1,2372 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Integrado - 8º BAEP</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body onload="inicializarSistema()">
+
+<datalist id="dl-efetivo-global"></datalist>
+<datalist id="dl-vtr-global"></datalist>
+<datalist id="dl-vtr-global-esc"></datalist>
+<datalist id="dl-oficiais-global"></datalist>
+
+<nav>
+    <div class="nav-left">
+        <img id="img-logo-nav" src="logo.png" alt="Logo BAEP" style="height: 40px; margin-right: 15px; border-radius: 4px; background-color: #000; object-fit: contain;" onerror="this.style.display='none'">
+        <button id="nav-portal" class="btn-nav-portal" onclick="verTela('portal')">PORTAL DO POLICIAL</button>
+        <button id="nav-p1" onclick="verTela('moduloP1')" style="display:none; border-color: var(--primary); color: var(--primary);">MÓDULO P1</button>
+        <button id="nav-p3" onclick="verTela('moduloEscala')" style="display:none; border-color: var(--primary); color: var(--primary);">MÓDULO ESCALA</button>
+    </div>
+    <div class="nav-right">
+        <button id="btn-login-p1" class="btn-login-right" onclick="prepararLogin('gestor')">GESTOR P1</button>
+        <button id="btn-login-esc" class="btn-login-right" onclick="prepararLogin('escalante')">ESCALANTE</button>
+        <button id="btn-logout" class="btn-login-right" style="display:none; color: var(--danger); border-color: var(--danger);" onclick="fazerLogout()">SAIR</button>
+    </div>
+</nav>
+
+<div class="container">
+    
+    <div id="portal" class="page active">
+        <h1 class="portal-main-title">PORTAL DO POLICIAL<br><span class="portal-sub-title">8º BAEP</span></h1>
+        <div class="grid-2">
+            <div class="card">
+                <h3>MINHA SITUAÇÃO OPERACIONAL / ADMINISTRATIVA</h3>
+                <p class="portal-card-desc">Consulte sua escala e folgas para os próximos 7 dias.</p>
+                <label>DIGITE SEU RE OU NOME COMPLETO</label>
+                <input type="text" id="busca-publica-pm" placeholder="Ex: 123456 ou JOÃO ROMÃO...">
+                <button class="main-btn btn-solid-yellow" onclick="consultarSituacaoPM()">CONSULTAR MINHA SITUAÇÃO</button>
+                <div id="acoes-situacao" style="display:none; margin-top:15px; gap:10px;">
+                    <button class="btn-whatsapp" style="flex:1;" onclick="enviarWhatsAppSituacao()">📲 WHATSAPP</button>
+                    <button class="btn-outline-danger" style="flex:1;" onclick="gerarPdfSituacao()">📕 GERAR PDF</button>
+                </div>
+                <div id="resultado-situacao" style="margin-top: 15px; color: var(--text-main); font-size:0.9rem;"></div>
+            </div>
+            <div class="card">
+                <h3>CONSULTAR ESCALA DIÁRIA</h3>
+                <p class="portal-card-desc">Selecione data e pelotão para ler a escala completa no painel.</p>
+                <div class="grid-2" style="gap:10px;">
+                    <div><label>DATA</label><input type="date" id="data-consulta-escala" style="margin-bottom:0;"></div>
+                    <div>
+                        <label>PELOTÃO</label>
+                        <select id="pel-consulta-escala" class="escala-select" style="margin-bottom:0; width:100%;">
+                            <option value="TODOS">Todos do Batalhão</option>
+                            <option value="1º Pelotão de Patrulhamento Tático">1º Pel Tático</option>
+                            <option value="2º Pelotão de Patrulhamento Tático">2º Pel Tático</option>
+                            <option value="1º GP Montado">1º GP Montado</option>
+                            <option value="2º GP Canil">2º GP Canil</option>
+                            <option value="3º GP Canil">3º GP Canil</option>
+                            <option value="1º Pel Seg Aut">1º Pel Seg Aut</option>
+                            <option value="2º Pel Seg Aut">2º Pel Seg Aut</option>
+                            <option value="Reserva de Armas">Reserva de Armas</option>
+                            <option value="Comandante da 1ª CAEP">Comandante da 1ª CAEP</option>
+    <option value="Comandante da 2ª CAEP">Comandante da 2ª CAEP</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="main-btn btn-outline-yellow" style="margin-top:15px;" onclick="consultarEscalaGeral()">VER ESCALA</button>
+                <div id="acoes-escala-geral" style="display:none; margin-top:15px; gap:10px;">
+                    <button class="btn-whatsapp" style="flex:1;" onclick="enviarWhatsAppEscalaGeral()">📲 WHATSAPP</button>
+                    <button class="btn-outline-danger" style="flex:1;" onclick="gerarPdfEscalaGeral()">📕 GERAR PDF</button>
+                </div>
+                <div id="resultado-escala-geral" style="margin-top: 15px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="login" class="page">
+        <div class="card" style="max-width: 400px; margin: 50px auto; border-color: var(--primary);">
+            <h2 style="text-align: center;" id="titulo-login">ACESSO RESTRITO</h2>
+            <input type="hidden" id="loginDestino">
+            <label>USUÁRIO</label><input type="text" id="loginUser">
+            <label>SENHA</label><input type="password" id="loginPass">
+            <button class="main-btn btn-solid-yellow" onclick="autenticar()">ENTRAR</button>
+            <div id="loginErro" style="color: var(--danger); display: none; margin-top:10px; text-align: center; font-weight: bold;">Credenciais Inválidas!</div>
+        </div>
+    </div>
+
+    <div id="moduloP1" class="page">
+        <h2>📊 GESTÃO P1</h2>
+        <div class="sub-nav" id="nav-abas-p1">
+            <button class="active" onclick="abrirAbaP1('dashboard', this)">PAINEL ESTRATÉGICO</button>
+            <button onclick="abrirAbaP1('efetivo', this)">EFETIVO</button>
+            <button onclick="abrirAbaP1('afastamentos', this)">SITUAÇÕES ADM</button>
+            <button onclick="abrirAbaP1('viagens', this)">VIAGENS</button>
+            <button onclick="abrirAbaP1('viaturas', this)">VIATURAS</button>
+            <button onclick="abrirAbaP1('cavalos', this)">CAVALOS</button>
+            <button onclick="abrirAbaP1('caes', this)">CÃES</button>
+            <button onclick="abrirAbaP1('escala-cmt', this)" style="margin-left: auto; border-color: var(--accent); color: var(--accent);">ESCALA DO CMT</button>
+        </div>
+
+        <div id="aba-dashboard" class="tab-content active">
+            <div class="card flex-between" style="border-color: var(--primary);">
+                <h3 style="margin:0;">PANORAMA OPERACIONAL DO DIA</h3>
+                <input type="date" id="dash-date-filter" onchange="atualizarDashboardP1()" style="width: auto; margin: 0;">
+            </div>
+            <div class="grid-3">
+                <div class="card" style="text-align:center;"><div class="dash-label">Efetivo 1ª CAEP</div><div class="dash-metric" id="dash-tot-1caep">0</div></div>
+                <div class="card" style="text-align:center;"><div class="dash-label">Efetivo 2ª CAEP</div><div class="dash-metric" id="dash-tot-2caep">0</div></div>
+                <div class="card" style="text-align:center; border-color: var(--danger);"><div class="dash-label" style="color: var(--danger);">Afastados (Data Sel.)</div><div class="dash-metric" style="color: var(--danger);" id="dash-tot-afastados">0</div></div>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <h3 style="border-bottom: 1px solid var(--border); padding-bottom: 10px;">Efetivo por Pelotão / GP</h3>
+                    <div id="dash-lista-pelotoes"></div>
+                </div>
+                <div class="card">
+                    <h3 style="border-bottom: 1px solid var(--border); padding-bottom: 10px;">Status da Escala Diária</h3>
+                    <div id="container-status-diario"></div>
+                    <h4 style="margin-top: 25px; margin-bottom: 5px; color: var(--primary); text-align: center;">Taxa de Emprego Operacional</h4>
+                    <div style="background: #222; border-radius: 10px; height: 20px; width: 100%; overflow: hidden;">
+                        <div id="dash-barra-emprego" style="background: var(--success); height: 100%; width: 0%; transition: width 0.5s;"></div>
+                    </div>
+                    <div style="text-align:center; font-size:0.8rem; margin-top:5px;" id="dash-txt-emprego">0% dos disponíveis foram escalados</div>
+                </div>
+            </div>
+        </div>
+<div id="aba-escala-cmt" class="tab-content">
+            <div class="card">
+                <h3>Escala Consolidada para o Comandante</h3>
+                <p class="portal-card-desc">Gere a escala de todo o Batalhão para uma data específica.</p>
+                <div class="grid-2" style="align-items: end;">
+                    <div><label>SELECIONE A DATA</label><input type="date" id="data-escala-cmt"></div>
+                    <div><button class="main-btn btn-solid-yellow" onclick="gerarEscalaComandante()">GERAR ESCALA CONSOLIDADA</button></div>
+                </div>
+            </div>
+            <div class="card" id="resultado-escala-cmt" style="display:none; border-color: var(--primary);">
+                <div class="flex-between" style="margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
+                    <h3 style="margin:0;">Visualização do Documento</h3>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-whatsapp" onclick="enviarWhatsAppCmt()">📲 ENVIAR WHATSAPP</button>
+                        <button class="btn-outline-danger" onclick="gerarPdfCmt()">📕 GERAR PDF</button>
+                    </div>
+                </div>
+                <div id="conteudo-escala-cmt" style="background:#050505; padding:20px; border-radius:4px; font-size:0.85rem; color:#ccc; white-space: pre-wrap; font-family: monospace; line-height: 1.5;"></div>
+            </div>
+        </div>
+
+        <div id="aba-efetivo" class="tab-content">
+            <div class="card">
+                <h3>Cadastrar / Editar Policial</h3>
+                <input type="hidden" id="editId-pm">
+                <div class="grid-3">
+                    <div><label>RE</label><input type="text" id="pm-re"></div>
+                    <div><label>Posto/Graduação</label>
+                        <select id="pm-posto">
+                            <option value="Cel PM">Cel PM</option><option value="Ten Cel PM">Ten Cel PM</option><option value="Maj PM">Maj PM</option>
+                            <option value="Cap PM">Cap PM</option><option value="1º Ten PM">1º Ten PM</option><option value="2º Ten PM">2º Ten PM</option>
+                            <option value="Subten PM">Subten PM</option><option value="1º Sgt PM">1º Sgt PM</option><option value="2º Sgt PM">2º Sgt PM</option>
+                            <option value="3º Sgt PM">3º Sgt PM</option><option value="Cb PM">Cb PM</option><option value="Sd PM">Sd PM</option>
+                        </select>
+                    </div>
+                    <div><label>Nome de Guerra (QRA)</label><input type="text" id="pm-qra"></div>
+                </div>
+                <div class="grid-3">
+                    <div style="grid-column: span 3;"><label>Nome Completo</label><input type="text" id="pm-nome" placeholder="Ex: JOÃO ROMÃO DA SILVA"></div>
+                </div>
+                <div class="grid-2">
+                    <div><label>Companhia</label><select id="pm-cia"><option value="1ª CAEP">1ª CAEP</option><option value="2ª CAEP">2ª CAEP</option><option value="EM">Estado Maior</option></select></div>
+                    <div>
+                        <label>Pelotão / Grupamento</label>
+                        <select id="pm-pel">
+                            <option value="1º Pelotão de Patrulhamento Tático">1º Pelotão de Patrulhamento Tático</option>
+                            <option value="2º Pelotão de Patrulhamento Tático">2º Pelotão de Patrulhamento Tático</option>
+                            <option value="1º GP Montado">1º GP Montado</option>
+                            <option value="2º GP Canil">2º GP Canil</option>
+                            <option value="3º GP Canil">3º GP Canil</option>
+                            <option value="1º Pel Seg Aut">1º Pel Seg Aut</option>
+                            <option value="2º Pel Seg Aut">2º Pel Seg Aut</option>
+                            <option value="Administrativo">Administrativo</option>
+                            <option value="Reserva de Armas">Reserva de Armas</option>
+                            <option value="Comandante da 1ª CAEP">Comandante da 1ª CAEP</option>
+                            <option value="Comandante do 1º Pelotão de Patrulhamento">Comandante do 1º Pelotão de Patrulhamento</option>
+                            <option value="Comandante do 2º Pelotão de Patrulhamento">Comandante do 2º Pelotão de Patrulhamento</option>
+                            <option value="Comandante da 2ª CAEP">Comandante da 2ª CAEP</option>
+                            <option value="Comandante do 1º Pelotão Seg Aut">Comandante do 1º Pelotão Seg Aut</option>
+                            <option value="Comandante do 2º Pelotão Seg Aut">Comandante do 2º Pelotão Seg Aut</option>
+                            <option value="Comandante do 1º GP Montado">Comandante do 1º GP Montado</option>
+                            <option value="Comandante do 2º GP Canil">Comandante do 2º GP Canil</option>
+                            <option value="Comandante do 3º GP Canil">Comandante do 3º GP Canil</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="main-btn btn-solid-yellow" onclick="salvarPM()">SALVAR NO EFETIVO</button>
+            </div>
+            
+            <div class="card flex-between">
+                <div style="display: flex; gap: 15px; align-items: center; flex: 1;">
+                    <h3 style="margin:0;">Efetivo</h3>
+                    <input type="text" id="busca-efetivo-p1" placeholder="Buscar PM (RE, Nome ou QRA)..." onkeyup="filtrarTabelaEfetivo()" style="margin:0; padding:8px; width:100%; max-width: 300px;">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <input type="file" id="upload-excel" style="display:none" accept=".xlsx, .xls" onchange="processarPlanilhaEfetivo(event)">
+                    <button class="btn-outline" style="padding: 8px 15px;" onclick="document.getElementById('upload-excel').click()">📥 IMPORTAR EXCEL</button>
+                    <button class="btn-outline" style="padding: 8px 15px;" onclick="exportarTabela('Efetivo', ['POSTO','RE','NOME','QRA','CIA','PELOTAO'], baseEfetivo, 'excel')">📄 EXPORTAR EXCEL</button>
+                    <button class="btn-outline-danger" onclick="exportarTabela('Efetivo', ['POSTO','RE','NOME','QRA','CIA','PELOTAO'], baseEfetivo, 'pdf')">📕 PDF</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table><thead><tr><th>POSTO</th><th>RE</th><th>NOME COMPLETO</th><th>QRA</th><th>PELOTÃO</th><th>AÇÕES</th></tr></thead><tbody id="tabela-efetivo"></tbody></table>
+            </div>
+        </div>
+
+        <div id="aba-afastamentos" class="tab-content">
+            <div class="card" style="margin-bottom: 20px; border-color: var(--primary);">
+                <h3 style="margin-top:0;">Gerenciar Tipos de Situação Administrativa</h3>
+                <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:200px;"><label>NOVA SITUAÇÃO</label><input type="text" id="novo-tipo-afast" placeholder="Ex: LICENÇA GALA" style="margin-bottom:0;"></div>
+                    <div style="display:flex; align-items:center; gap:5px; margin-bottom: 15px;"><input type="checkbox" id="novo-tipo-bloqueia" checked style="width: auto; margin:0;"><label style="margin:0; font-size: 0.75rem; text-transform:none; cursor:pointer; color:#ccc;" for="novo-tipo-bloqueia">Gera Impedimento de Escala</label></div>
+                    <button class="btn-outline" style="padding:15px 20px;" onclick="salvarNovoTipoAfast()">+ ADICIONAR</button>
+                </div>
+                <div id="lista-tipos-afast" style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;"></div>
+            </div>
+
+            <div class="card">
+                <h3>Lançar / Editar Situação Administrativa</h3>
+                <input type="hidden" id="editId-afast">
+                <div class="grid-3" style="grid-template-columns: 1fr 1fr 1fr;">
+                    <div><label>Policial (Busque por RE ou Nome)</label><input type="text" list="dl-efetivo-global" id="afast-pm-busca" placeholder="Digite para buscar..." autocomplete="off" class="escala-select"></div>
+                    <div><label>Situação</label><select id="afast-tipo" onchange="toggleOutros('afast-tipo', 'afast-outros-p1')"></select><input type="text" id="afast-outros-p1" placeholder="Especifique..." style="display:none; margin-top:5px; padding:10px;"></div>
+                    <div style="display:flex; gap:10px;"><div style="flex:1;"><label>Data Inicial</label><input type="date" id="afast-data" style="margin-bottom:0;"></div><div style="flex:1;"><label>Data Final (Opcional)</label><input type="date" id="afast-data-fim" style="margin-bottom:0;" title="Preencha apenas para períodos longos"></div></div>
+                </div>
+                <div style="margin-top: 10px;"><label>Motivo / Observação (Obrigatório)</label><input type="text" id="afast-obs" placeholder="Ex: Detalhes da restrição, local do depoimento, etc." style="margin-bottom:0;"></div>
+                <button class="main-btn btn-solid-yellow" style="margin-top: 20px;" onclick="salvarAfastamentoP1()">REGISTRAR SITUAÇÃO</button>
+            </div>
+            <div class="card flex-between"><h3 style="margin:0;">Histórico de Situações Administrativas</h3></div>
+            <div class="table-responsive">
+                <table><thead><tr><th>PM</th><th>SITUAÇÃO / OBSERVAÇÃO</th><th>PERÍODO</th><th>AÇÕES</th></tr></thead><tbody id="tabela-afastamentos"></tbody></table>
+            </div>
+        </div>
+
+        <div id="aba-viagens" class="tab-content">
+            <div id="lista-viagens-container">
+                <div class="card flex-between"><h3 style="margin:0;">Histórico de Viagens Operacionais</h3><button class="main-btn btn-solid-yellow" style="width:auto; padding:10px 20px;" onclick="novaViagemUnificada()">+ NOVA VIAGEM</button></div>
+                <div class="table-responsive"><table><thead><tr><th>DESTINO</th><th>SAÍDA</th><th>RETORNO</th><th>AÇÕES</th></tr></thead><tbody id="tabela-viagens"></tbody></table></div>
+            </div>
+
+            <div class="card" id="workspace-viagem" style="display:none; border-color: var(--primary);">
+                <div class="flex-between" style="border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px;"><h3 style="margin:0; color:var(--primary);">Configuração de Viagem / Missão</h3><button class="btn-outline-danger" onclick="fecharWorkspaceViagem()">❌ FECHAR</button></div>
+                <input type="hidden" id="editId-viagem">
+                <div class="grid-3" style="margin-bottom:20px;">
+                    <div><label>Destino da Missão</label><input type="text" id="viagem-destino" placeholder="Ex: São Paulo/SP" style="margin-bottom:0;"></div>
+                    <div><label>Data/Hora Saída</label><input type="datetime-local" id="viagem-saida" style="margin-bottom:0;"></div>
+                    <div><label>Data/Hora Retorno</label><input type="datetime-local" id="viagem-retorno" style="margin-bottom:0;"></div>
+                </div>
+                <div class="flex-between" style="border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px;"><h4 style="margin:0;">Viaturas e Efetivo</h4><button class="btn-outline" style="padding: 10px;" onclick="abrirModalCadastroPM()">+ CADASTRAR PM (ADMINISTRATIVO)</button></div>
+                <div id="container-equipes-viagem"></div>
+                <button class="btn-outline" style="width:100%; padding:15px; margin-top:15px;" onclick="addEquipeViagem()">+ ADICIONAR VIATURA / EQUIPE</button>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="main-btn btn-outline" style="flex:1;" onclick="abrirPreviewViagem()">👁️ VISUALIZAR VIAGEM</button>
+                    <button class="main-btn btn-solid-yellow" style="flex:1;" onclick="salvarViagemFinal()">💾 SALVAR VIAGEM</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="aba-viaturas" class="tab-content">
+            <div class="card">
+                <h3>Cadastrar / Editar Viatura</h3>
+                <input type="hidden" id="editId-vtr">
+                <div class="grid-3">
+                    <div><label>Prefixo</label><input type="text" id="vtr-prefixo" placeholder="Ex: E-08143"></div>
+                    <div><label>Placa</label><input type="text" id="vtr-placa" placeholder="Ex: ABC-1234"></div>
+                    <div><label>Ano / Modelo</label><input type="text" id="vtr-modelo" placeholder="Ex: 2023 / Hilux"></div>
+                </div>
+                <div class="grid-3">
+                    <div><label>Tipo</label><select id="vtr-tipo"><option value="4 Rodas">4 Rodas</option><option value="2 Rodas (Rocam)">2 Rodas (Rocam)</option><option value="Base Móvel">Base Móvel</option><option value="Caminhão">Caminhão (BIG)</option><option value="Outros">Outros</option></select></div>
+                    <div><label>Companhia</label><select id="vtr-cia"><option value="1ª CAEP">1ª CAEP</option><option value="2ª CAEP">2ª CAEP</option><option value="EM">Estado Maior</option></select></div>
+                    <div><label>Pelotão / GP</label><select id="vtr-pel"><option value="1º Pelotão de Patrulhamento Tático">1º Pelotão de Patrulhamento Tático</option><option value="2º Pelotão de Patrulhamento Tático">2º Pelotão de Patrulhamento Tático</option><option value="1º GP Montado">1º GP Montado</option><option value="2º GP Canil">2º GP Canil</option><option value="3º GP Canil">3º GP Canil</option><option value="1º Pel Seg Aut">1º Pel Seg Aut</option><option value="2º Pel Seg Aut">2º Pel Seg Aut</option><option value="Administrativo">Administrativo</option></select></div>
+                </div>
+                <button class="main-btn btn-solid-yellow" onclick="salvarViatura()">SALVAR VIATURA</button>
+            </div>
+            <div class="card flex-between"><h3 style="margin:0;">Frota Registrada</h3></div>
+            <div class="table-responsive"><table><thead><tr><th>PREFIXO</th><th>MODELO</th><th>CIA / PEL</th><th>TIPO</th><th>AÇÕES</th></tr></thead><tbody id="tabela-viaturas"></tbody></table></div>
+        </div>
+
+        <div id="aba-cavalos" class="tab-content">
+            <div class="card">
+                <h3>Cadastrar / Editar Cavalo</h3>
+                <input type="hidden" id="editId-cavalo">
+                <div class="grid-3">
+                    <div><label>Nome</label><input type="text" id="cavalo-nome" placeholder="Ex: 1350 - ISIS"></div>
+                    <div><label>Companhia</label><select id="cavalo-cia"><option value="1ª CAEP">1ª CAEP</option><option value="2ª CAEP">2ª CAEP</option></select></div>
+                    <div><label>Pelotão / GP</label><select id="cavalo-pel"><option value="1º GP Montado">1º GP Montado</option><option value="Administrativo">Administrativo</option></select></div>
+                </div>
+                <button class="main-btn btn-solid-yellow" onclick="salvarCavalo()">SALVAR CAVALO</button>
+            </div>
+            <div class="card flex-between"><h3 style="margin:0;">Cavalos Registrados</h3></div>
+            <div class="table-responsive"><table><thead><tr><th>NOME DO CAVALO</th><th>CIA / PEL</th><th>AÇÕES</th></tr></thead><tbody id="tabela-cavalos"></tbody></table></div>
+        </div>
+
+        <div id="aba-caes" class="tab-content">
+            <div class="card">
+                <h3>Cadastrar / Editar Cão (K9)</h3>
+                <input type="hidden" id="editId-cao">
+                <div class="grid-3">
+                    <div><label>Nome</label><input type="text" id="cao-nome" placeholder="Ex: K9 THOR"></div>
+                    <div><label>Companhia</label><select id="cao-cia"><option value="1ª CAEP">1ª CAEP</option><option value="2ª CAEP">2ª CAEP</option></select></div>
+                    <div><label>Pelotão / GP</label><select id="cao-pel"><option value="2º GP Canil">2º GP Canil</option><option value="3º GP Canil">3º GP Canil</option><option value="Administrativo">Administrativo</option></select></div>
+                </div>
+                <button class="main-btn btn-solid-yellow" onclick="salvarCao()">SALVAR CÃO</button>
+            </div>
+            <div class="card flex-between"><h3 style="margin:0;">Cães Registrados</h3></div>
+            <div class="table-responsive"><table><thead><tr><th>NOME DO CÃO</th><th>CIA / PEL</th><th>AÇÕES</th></tr></thead><tbody id="tabela-caes"></tbody></table></div>
+        </div>
+    </div>
+
+    <div id="moduloEscala" class="page">
+        <h2>📋 ELABORAÇÃO DE ESCALA</h2>
+        <datalist id="dl-escala-pms"></datalist> 
+
+        <div class="sub-nav" id="nav-abas-escala">
+            <button onclick="abrirAbaEscalaRouter('painel', this)" class="active">Painel de Gestão</button>
+            <button onclick="abrirAbaEscalaRouter('cmt-cia', this)" style="border-color: #eade0b; color: #eade0b;">Cmt de Cia</button>
+            <button onclick="abrirAbaEscalaRouter('1º Pelotão de Patrulhamento Tático', this)">1º Pel Tático</button>
+            <button onclick="abrirAbaEscalaRouter('2º Pelotão de Patrulhamento Tático', this)">2º Pel Tático</button>
+            <button onclick="abrirAbaEscalaRouter('1º GP Montado', this)">1º GP Montado</button>
+            <button onclick="abrirAbaEscalaRouter('2º GP Canil', this)">2º GP Canil</button>
+            <button onclick="abrirAbaEscalaRouter('3º GP Canil', this)">3º GP Canil</button>
+            <button onclick="abrirAbaEscalaRouter('1º Pel Seg Aut', this)">1º Pel Seg Aut</button>
+            <button onclick="abrirAbaEscalaRouter('2º Pel Seg Aut', this)">2º Pel Seg Aut</button>
+            <button onclick="abrirAbaEscalaRouter('viagens', this)" style="border-color: var(--accent); color: var(--accent);">VIAGENS</button>
+            <button onclick="abrirAbaEscalaRouter('Reserva de Armas', this)" style="border-color: #3498db; color: #3498db;">RESERVA DE ARMAS</button>
+            <button onclick="abrirAbaEscalaRouter('historico', this)" style="margin-left:auto;">Histórico</button>
+        </div>
+
+        <div id="escala-painel-geral" style="display:none;">
+            <div class="card flex-between" style="border-color: var(--primary);">
+                <h3 style="margin:0;">📊 STATUS DE GESTÃO</h3>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <select id="pg-filtro-hierarquia" onchange="atualizarPainelGestao()" class="escala-select" style="margin:0; min-width:200px;">
+                        <option value="GERAL-TODOS">Visão Geral (Batalhão)</option>
+                        <optgroup label="Companhias">
+                            <option value="CIA-1ª CAEP">1ª CAEP</option>
+                            <option value="CIA-2ª CAEP">2ª CAEP</option>
+                        </optgroup>
+                        <optgroup label="Pelotões / Funções">
+                            <option value="PEL-1º Pelotão de Patrulhamento Tático">1º Pelotão de Patrulhamento Tático</option>
+                            <option value="PEL-2º Pelotão de Patrulhamento Tático">2º Pelotão de Patrulhamento Tático</option>
+                            <option value="PEL-1º GP Montado">1º GP Montado</option>
+                            <option value="PEL-2º GP Canil">2º GP Canil</option>
+                            <option value="PEL-3º GP Canil">3º GP Canil</option>
+                            <option value="PEL-1º Pel Seg Aut">1º Pel Seg Aut</option>
+                            <option value="PEL-2º Pel Seg Aut">2º Pel Seg Aut</option>
+                            <option value="PEL-Administrativo">Administrativo</option>
+                            <option value="PEL-Reserva de Armas">Reserva de Armas</option>
+                            <option value="PEL-Comandante da 1ª CAEP">Comandante da 1ª CAEP</option>
+                            <option value="PEL-Comandante da 2ª CAEP">Comandante da 2ª CAEP</option>
+                        </optgroup>
+                    </select>
+                    <input type="date" id="painel-data" onchange="atualizarPainelGestao()" style="width: auto; margin: 0;">
+                </div>
+            </div>
+
+            <div class="grid-3">
+                <div class="card" style="text-align:center;"><div class="dash-label">STATUS DO EFETIVO</div><div class="dash-metric" id="pg-aptos">0</div><div style="font-size:0.8rem; color:var(--text-dim)">Total: <span id="pg-tot-pm">0</span> | Afastados: <span id="pg-afastados" style="color:var(--danger)">0</span></div></div>
+                <div class="card" style="text-align:center;"><div class="dash-label">STATUS DE VIATURA</div><div class="dash-metric" id="pg-vtr-op">0</div><div style="font-size:0.8rem; color:var(--text-dim)">Total Frota: <span id="pg-tot-vtr">0</span> | Bx: <span id="pg-vtr-bx" style="color:var(--danger)">0</span> | Emp: <span id="pg-vtr-emp" style="color:var(--accent)">0</span></div></div>
+                <div class="card" style="text-align:center;"><div class="dash-label">STATUS DOS SEMOVENTES</div><div class="dash-metric" id="pg-animais">0</div><div style="font-size:0.8rem; color:var(--text-dim)">Cavalos: <span id="pg-cavalos">0</span> | Cães: <span id="pg-caes">0</span></div></div>
+            </div>
+
+            <div class="card" style="border-color: var(--accent); background: rgba(12, 12, 12, 0.9);">
+                <h3 style="margin:0 0 10px 0; color: var(--accent);">📌 MURAL DE OBSERVAÇÕES E AJUSTES</h3>
+                <p style="font-size:0.75rem; color:var(--text-dim); margin-top:-5px;">Registro em tempo real das alterações feitas por quem assumiu o serviço.</p>
+                <div id="mural-avisos-painel" style="max-height: 120px; overflow-y: auto; font-size: 0.85rem; color: #ccc;"></div>
+            </div>
+
+            <div class="card">
+                <div class="flex-between" style="border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px;">
+                    <h3 style="margin:0;">Ajuste Rápido de Recursos Humanos e Materiais</h3>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <input type="text" id="pg-busca-rapida" placeholder="Buscar PM, VTR, K9 ou Cavalo..." onkeyup="atualizarPainelGestao()" class="escala-select" style="width:250px; margin:0; padding:10px;">
+                        <select id="pg-filtro-tipo" onchange="atualizarPainelGestao()" class="escala-select" style="width:200px; margin:0;">
+                            <option value="pm">Policiais</option><option value="vtr">Viaturas</option><option value="cavalo">Cavalos</option><option value="cao">Cães</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height: 400px; margin-top: 0;">
+                    <table><thead id="pg-tabela-head"></thead><tbody id="pg-tabela-body"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="setup-escala" style="display:none;">
+            <h3 id="titulo-setup-escala">Montar Escala</h3>
+            <label>Data da Escala</label>
+            <input type="date" id="data-escala" style="max-width: 300px;">
+            <button class="main-btn btn-solid-yellow" onclick="iniciarEscala()" style="max-width: 300px;">INICIAR ESCALA</button>
+        </div>
+
+        <div id="workspace-escala" style="display:none;">
+            <input type="hidden" id="editId-escala">
+<div class="card flex-between" style="padding: 15px; margin-bottom: 20px; border-color: var(--primary);">
+        <h3 style="margin:0;" id="ws-titulo-escala">Editando Escala</h3>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <label style="margin:0; color:var(--text-main);">DATA DA ESCALA:</label>
+            <input type="date" id="ws-data-escala" style="margin:0; width:auto;" onchange="atualizarDataWorkspace(this.value)">
+        </div>
+    </div>
+            <div class="grid-escala">
+                <div>
+                    <div id="container-equipes"></div>
+                    <div id="botoes-add-equipe" class="card flex-between" style="padding: 15px; margin-top: 20px;">
+                        <h3 style="margin:0; width:100%; margin-bottom:10px;">Adicionar Equipes</h3>
+                    </div>
+
+                    <div class="card" style="padding:15px; margin-top:20px;">
+                        <h3 style="margin:0 0 15px 0;">FUNÇÕES / APOIO</h3>
+                        <div id="container-funcoes-dinamicas"></div>
+                        <button class="btn-outline" style="padding:5px 10px; width:100%; margin-top:10px;" onclick="addFuncaoApoio()">+ ADD FUNÇÃO</button>
+                    </div>
+
+                    <div class="card" style="padding:15px; margin-top:20px;">
+                        <h3 style="margin:0 0 15px 0;">STATUS DA FROTA</h3>
+                        <div id="container-status-frota"></div>
+                        <button class="btn-outline" style="padding:5px 10px; width:100%; margin-top:10px;" onclick="addStatusVtr()">+ ADD STATUS VTR</button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card" style="padding: 15px; border-color: var(--danger);">
+                        <h4 style="margin:0; color:var(--danger)">Avisos Administrativos</h4>
+                        <ul id="lista-afastados-dia" style="color: #ff6b6b; padding-left:20px; font-size: 0.85rem;"></ul>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card" style="padding: 15px; position: sticky; top: 80px; max-height: 85vh; overflow-y: auto;">
+                        <h3 style="margin:0; border-bottom: 1px solid var(--accent); padding-bottom:10px;">STATUS DO PELOTÃO</h3>
+                        <input type="text" id="filtro-pms-escala" placeholder="Buscar PM..." style="margin-bottom: 10px; padding: 10px;" onkeyup="validarEscala()">
+                        <div id="lista-status-efetivo" style="margin-bottom: 20px;"></div>
+
+                        <h3 style="margin:0; border-bottom: 1px solid var(--accent); padding-bottom:10px; margin-top:25px;">STATUS DAS VIATURAS</h3>
+                        <input type="text" id="filtro-vtrs-escala" placeholder="Buscar VTR..." style="margin-bottom: 10px; padding: 10px;" onkeyup="validarEscala()">
+                        <div id="lista-status-vtr"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="main-btn btn-outline" style="flex:1;" onclick="abrirPreviewEscala()">👁️ VISUALIZAR ESCALA</button>
+                <button class="main-btn btn-solid-yellow" style="flex:1;" onclick="salvarEscalaFinal()">💾 SALVAR ESCALA</button>
+            </div>
+        </div>
+        
+        <div id="escala-cmt-cia-wrapper" style="display:none;">
+            <div id="lista-cmt-cia-container">
+                <div class="card flex-between">
+                    <h3 style="margin:0;">Histórico: Escala Cmt de Cia</h3>
+                    <button class="main-btn btn-solid-yellow" style="width:auto; padding:10px 20px;" onclick="novaEscalaCmtCia()">+ NOVA ESCALA CMT CIA</button>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead><tr><th>DATA</th><th>COMPANHIA</th><th>TIPO</th><th>AÇÕES</th></tr></thead>
+                        <tbody id="tabela-cmt-cia"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" id="workspace-cmt-cia" style="display:none; border-color: var(--primary);">
+                <div class="flex-between" style="border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px;">
+                    <h3 style="margin:0; color:var(--primary);">Configuração Escala Cmt Cia</h3>
+                    <button class="btn-outline-danger" onclick="fecharWorkspaceCmtCia()">❌ FECHAR</button>
+                </div>
+                <input type="hidden" id="editId-cmt-cia">
+                
+                <div class="grid-3" style="margin-bottom:15px;">
+                    <div><label>Data</label><input type="date" id="cmt-cia-data" style="margin-bottom:0;"></div>
+                    <div>
+                        <label>Companhia</label>
+                        <select id="cmt-cia-sel" class="escala-select" style="margin-bottom:0;">
+                            <option value="1ª CAEP">1ª CAEP</option>
+                            <option value="2ª CAEP">2ª CAEP</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Tipo de Escala</label>
+                        <select id="cmt-cia-tipo" class="escala-select" style="margin-bottom:0;" onchange="toggleTipoCmtCia()">
+                            <option value="Administrativa">Administrativa</option>
+                            <option value="Operacional">Operacional</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid-2" style="margin-bottom:15px;">
+                    <div>
+                        <label>Viatura</label>
+                        <input type="text" list="dl-vtr-global-esc" id="cmt-cia-vtr" class="escala-select" style="margin-bottom:0;" placeholder="Buscar VTR...">
+                    </div>
+                    <div>
+                        <label>Horário</label>
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <input type="time" id="cmt-cia-hIni" style="margin:0;">
+                            <span style="color:#7a">às</span>
+                            <input type="time" id="cmt-cia-hFim" style="margin:0;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="equipe-box" style="border-color: var(--primary); background: rgba(0,0,0,0.5);">
+                    <label>Cmt de Cia</label>
+                    <input type="text" list="dl-oficiais-global" id="cmt-cia-cmt" class="escala-select" placeholder="Buscar Oficial Cmt Cia...">
+                    <label>Motorista (Opcional)</label>
+                    <input type="text" list="dl-efetivo-global" id="cmt-cia-mot" class="escala-select" placeholder="Buscar PM...">
+                    
+                    <div id="cmt-cia-segurancas" style="display:none;">
+                        <label>Segurança 1</label>
+                        <input type="text" list="dl-efetivo-global" id="cmt-cia-seg1" class="escala-select" placeholder="Buscar PM...">
+                        <label>Segurança 2</label>
+                        <input type="text" list="dl-efetivo-global" id="cmt-cia-seg2" class="escala-select" placeholder="Buscar PM...">
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="main-btn btn-outline" style="flex:1;" onclick="abrirPreviewCmtCia()">👁️ VISUALIZAR</button>
+                    <button class="main-btn btn-solid-yellow" style="flex:1;" onclick="salvarEscalaCmtCiaFinal()">💾 SALVAR ESCALA CMT CIA</button>
+                </div>
+            </div>
+        </div>
+        <div class="card" id="historico-escala" style="display:none;">
+            <div class="flex-between" style="border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px;">
+                <h3 style="margin:0;">Escalas Salvas</h3>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="btn-whatsapp" onclick="compartilharWhatsAppSelecionados()">📲 WPP SELECIONADAS</button>
+                    <button class="btn-outline-danger" onclick="gerarPdfSelecionadas()">📕 PDF SELECIONADAS</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th style="width:40px; text-align:center;"><input type="checkbox" id="check-all" onclick="toggleAllChecks(this)"></th><th>DATA</th><th>PELOTÃO</th><th>AÇÕES</th></tr></thead>
+                    <tbody id="tabela-historico-escala"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="escala-viagens-wrapper" style="display:none;">
+            <div id="lista-viagens-container-esc">
+                <div class="card flex-between">
+                    <h3 style="margin:0;">Histórico de Viagens Operacionais (Escalante)</h3>
+                    <button class="main-btn btn-solid-yellow" style="width:auto; padding:10px 20px;" onclick="novaViagemUnificadaEsc()">+ NOVA VIAGEM</button>
+                </div>
+                <div class="table-responsive"><table><thead><tr><th>DESTINO</th><th>SAÍDA</th><th>RETORNO</th><th>AÇÕES</th></tr></thead><tbody id="tabela-viagens-esc"></tbody></table></div>
+            </div>
+
+            <div class="card" id="workspace-viagem-esc" style="display:none; border-color: var(--primary);">
+                <div class="flex-between" style="border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px;">
+                    <h3 style="margin:0; color:var(--primary);">Configuração de Viagem / Missão</h3>
+                    <button class="btn-outline-danger" onclick="fecharWorkspaceViagemEsc()">❌ FECHAR</button>
+                </div>
+                <input type="hidden" id="editId-viagem-esc">
+                <div class="grid-3" style="margin-bottom:20px;">
+                    <div><label>Destino da Missão</label><input type="text" id="viagem-destino-esc" placeholder="Ex: São Paulo/SP" style="margin-bottom:0;"></div>
+                    <div><label>Data/Hora Saída</label><input type="datetime-local" id="viagem-saida-esc" style="margin-bottom:0;"></div>
+                    <div><label>Data/Hora Retorno</label><input type="datetime-local" id="viagem-retorno-esc" style="margin-bottom:0;"></div>
+                </div>
+                <div class="flex-between" style="border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px;"><h4 style="margin:0;">Viaturas e Efetivo</h4><button class="btn-outline" style="padding: 10px;" onclick="abrirModalCadastroPM()">+ CADASTRAR PM</button></div>
+                <div id="container-equipes-viagem-esc"></div>
+                <button class="btn-outline" style="width:100%; padding:15px; margin-top:15px;" onclick="addEquipeViagemEsc()">+ ADICIONAR VIATURA / EQUIPE</button>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="main-btn btn-outline" style="flex:1;" onclick="abrirPreviewViagemEsc()">👁️ VISUALIZAR VIAGEM</button>
+                    <button class="main-btn btn-solid-yellow" style="flex:1;" onclick="salvarViagemFinalEsc()">💾 SALVAR VIAGEM</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modalCadastroPMRapido" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color: var(--primary);">Cadastrar PM Rápido</h3>
+        <div class="grid-2">
+            <div><label>Posto</label><select id="cad-pm-posto" class="escala-select"><option value="Sd PM" selected>Sd PM</option><option value="Cb PM">Cb PM</option><option value="Sgt PM">Sgt PM</option></select></div>
+            <div><label>RE</label><input type="text" id="cad-pm-re"></div>
+        </div>
+        <label>Nome Completo</label><input type="text" id="cad-pm-nome">
+        <label>QRA</label><input type="text" id="cad-pm-qra">
+        <button onclick="salvarCadastroPMRapido()" class="main-btn btn-solid-yellow" style="margin-top:15px;">SALVAR</button>
+        <button onclick="document.getElementById('modalCadastroPMRapido').style.display='none';" class="main-btn btn-outline-yellow" style="margin-top:10px;">CANCELAR</button>
+    </div>
+</div>
+
+<div id="modalAfastRapido" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color: var(--primary);">Registrar Situação Administrativa</h3>
+        <p style="color: #ccc; margin-bottom: 20px;">Policial: <strong id="pm-alvo-afast"></strong></p>
+        <select id="afast-tipo-rapido" onchange="toggleOutros('afast-tipo-rapido', 'afast-outros-rapido')" class="escala-select" style="width:100%; margin-bottom:10px;"></select>
+        <input type="text" id="afast-outros-rapido" placeholder="Especifique a situação..." style="display:none; margin-top:5px; padding:10px; width:100%; box-sizing: border-box;">
+        <input type="text" id="afast-obs-rapido" placeholder="Motivo / Observação (Obrigatório)..." style="margin-top:5px; padding:10px; width:100%; box-sizing: border-box;">
+        <button onclick="confirmarAfastRapido()" class="main-btn btn-solid-yellow" style="margin-top:15px;">Confirmar</button>
+        <button onclick="document.getElementById('modalAfastRapido').style.display='none';" class="main-btn btn-outline-yellow" style="margin-top:10px;">Cancelar</button>
+    </div>
+</div>
+
+<div id="modalEdicaoRapida" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color: var(--primary);" id="mer-titulo">Ajuste Rápido</h3>
+        <input type="hidden" id="mer-tipo"><input type="hidden" id="mer-id">
+        <label>Companhia Vinculada</label>
+        <select id="mer-cia" class="escala-select"><option value="1ª CAEP">1ª CAEP</option><option value="2ª CAEP">2ª CAEP</option><option value="EM">Estado Maior</option></select>
+        <label>Pelotão / Grupamento</label>
+        <select id="mer-pel" class="escala-select">
+            <option value="1º Pelotão de Patrulhamento Tático">1º Pelotão de Patrulhamento Tático</option>
+            <option value="2º Pelotão de Patrulhamento Tático">2º Pelotão de Patrulhamento Tático</option>
+            <option value="1º GP Montado">1º GP Montado</option>
+            <option value="2º GP Canil">2º GP Canil</option>
+            <option value="3º GP Canil">3º GP Canil</option>
+            <option value="1º Pel Seg Aut">1º Pel Seg Aut</option>
+            <option value="2º Pel Seg Aut">2º Pel Seg Aut</option>
+            <option value="Administrativo">Administrativo</option>
+            <option value="Reserva de Armas">Reserva de Armas</option>
+            <option value="Comandante do 1º Pelotão de Patrulhamento">Comandante do 1º Pelotão de Patrulhamento</option>
+            <option value="Comandante do 2º Pelotão de Patrulhamento">Comandante do 2º Pelotão de Patrulhamento</option>
+            <option value="Comandante do 1º Pelotão Seg Aut">Comandante do 1º Pelotão Seg Aut</option>
+            <option value="Comandante do 2º Pelotão Seg Aut">Comandante do 2º Pelotão Seg Aut</option>
+            <option value="Comandante do 1º GP Montado">Comandante do 1º GP Montado</option>
+            <option value="Comandante do 2º GP Canil">Comandante do 2º GP Canil</option>
+            <option value="Comandante do 3º GP Canil">Comandante do 3º GP Canil</option>
+            <option value="Comandante da 1ª CAEP">Comandante da 1ª CAEP</option>
+            <option value="Comandante da 2ª CAEP">Comandante da 2ª CAEP</option>
+        </select>
+        <label style="color:var(--accent);">OBSERVAÇÃO (Opcional)</label>
+        <textarea id="mer-obs" rows="3" placeholder="Ex: Viatura baixada, aguardando peça..." style="width:100%; padding:10px; background:#1a1a1a; color:#fff; border:1px solid #333;"></textarea>
+        <button onclick="salvarEdicaoRapida()" class="main-btn btn-solid-yellow" style="margin-top:20px;">Salvar Alterações</button>
+        <button onclick="document.getElementById('modalEdicaoRapida').style.display='none';" class="main-btn btn-outline-yellow" style="margin-top:10px;">Cancelar</button>
+    </div>
+</div>
+
+<div id="modalPreviewEscala" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <h3 style="margin-top:0; color: var(--primary);">Pré-visualização da Escala</h3>
+        <div id="conteudo-preview" style="background:#050505; padding:15px; border-radius:4px; font-size:0.85rem; color:#ccc; white-space: pre-wrap; font-family: monospace; line-height: 1.5; max-height: 60vh; overflow-y: auto;"></div>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button onclick="document.getElementById('modalPreviewEscala').style.display='none';" class="main-btn btn-outline-yellow" style="flex:1;">⬅️ VOLTAR / EDITAR</button>
+            <button onclick="salvarDaPreVisualizacao()" class="main-btn btn-solid-yellow" id="btn-save-preview" style="flex:1;">💾 SALVAR ESCALA</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalPreviewViagem" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <h3 style="margin-top:0; color: var(--primary);">Pré-visualização da Viagem</h3>
+        <div id="conteudo-preview-viagem" style="background:#050505; padding:15px; border-radius:4px; font-size:0.85rem; color:#ccc; white-space: pre-wrap; font-family: monospace; line-height: 1.5; max-height: 60vh; overflow-y: auto;"></div>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button onclick="document.getElementById('modalPreviewViagem').style.display='none';" class="main-btn btn-outline-yellow" style="flex:1;">⬅️ VOLTAR / EDITAR</button>
+            <button onclick="salvarDaPreVisualizacaoViagem()" class="main-btn btn-solid-yellow" style="flex:1;">💾 SALVAR VIAGEM</button>
+        </div>
+    </div>
+</div>
+<script>
+    let baseEfetivo = []; let baseViaturas = []; let baseCavalos = []; let baseCaes = []; let baseAfastamentos = []; let baseEscalas = [];
+    let baseTiposAfast = []; let baseViagens = []; let baseAvisosPainel = []; 
+    let baseEscalasCmtCia = []; 
+    let pelotaoAtivo = ''; let dataEscalaAtiva = ''; let pmsEsperados = []; let qraAlvoAfastamento = ''; 
+    let eqpIdCount = 0; let hipoIdCount = 0; let funcIdCount = 0; let vtrStatusCount = 0; let viagemEqpIdCount = 0; let viagemEqpIdCountEsc = 0;
+    let textoEscalaCmtAtual = ""; let textoConsultaSituacaoAtual = ""; let pmConsultaAtual = ""; let textoConsultaEscalaGeralAtual = ""; let dataConsultaEscalaAtual = "";
+// --- FUNÇÃO DE VERIFICAÇÃO DE ESCALAS ---
+function obterPmsEscaladosNoDia(data, idEscalaAtual) {
+    let escalados = [];
+    // Busca em escalas gerais ignorando a que está sendo editada
+    baseEscalas.filter(e => e.data === data && String(e.id) !== String(idEscalaAtual)).forEach(esc => {
+        if (esc.equipes) esc.equipes.forEach(eq => { if(eq.pms) eq.pms.forEach(pm => escalados.push(pm)); });
+        if (esc.funcoes) esc.funcoes.forEach(f => escalados.push(f));
+    });
+    // Busca em escalas de Cmt Cia ignorando a que está sendo editada
+    baseEscalasCmtCia.filter(e => e.data === data && String(e.id) !== String(idEscalaAtual)).forEach(c => {
+        if(c.cmt) escalados.push(c.cmt);
+        if(c.mot) escalados.push(c.mot);
+        if(c.seg1) escalados.push(c.seg1);
+        if(c.seg2) escalados.push(c.seg2);
+    });
+    return escalados;
+}
+    const normalizeStr = (str) => (str || '').toString().toUpperCase().trim().replace(/°/g, 'º');
+
+    const mapaCia = {
+        '1º Pelotão de Patrulhamento Tático': '1ª CAEP', '2º Pelotão de Patrulhamento Tático': '1ª CAEP',
+        '1º GP Montado': '1ª CAEP', '2º GP Canil': '1ª CAEP', '3º GP Canil': '1ª CAEP',
+        'Comandante do 1º Pelotão de Patrulhamento': '1ª CAEP', 'Comandante do 2º Pelotão de Patrulhamento': '1ª CAEP',
+        '1º Pel Seg Aut': '2ª CAEP', '2º Pel Seg Aut': '2ª CAEP',
+        'Comandante do 1º Pelotão Seg Aut': '2ª CAEP', 'Comandante do 2º Pelotão Seg Aut': '2ª CAEP',
+       'Comandante do 1º GP Montado': '1ª CAEP', 'Comandante do 2º GP Canil': '1ª CAEP', 'Comandante do 3º GP Canil': '1ª CAEP',
+        'Reserva de Armas': '1ª CAEP',
+        'Comandante da 1ª CAEP': '1ª CAEP',
+        'Comandante da 2ª CAEP': '2ª CAEP'
+    };
+
+    function matchPm(pm, displayStr) {
+        if (!displayStr) return false;
+        let reMatch = displayStr.match(/([0-9]{6,7}-[A-Z0-9])/);
+        if (reMatch && reMatch[1] === pm.re) return true;
+        let strUpper = normalizeStr(displayStr);
+        if (strUpper === normalizeStr(pm.qra) && strUpper !== "") return true;
+        if (strUpper === normalizeStr(pm.nome) && strUpper !== "") return true;
+        if (strUpper === normalizeStr(pm.re) && strUpper !== "") return true;
+        return false;
+    }
+
+    async function inicializarSistema() { 
+        await carregarLocal();
+        document.getElementById('dash-date-filter').value = new Date().toISOString().split('T')[0];
+        atualizarTelas();
+    }
+
+    async function carregarLocal() {
+        try {
+            const response = await fetch('/api/sync');
+            if (response.ok) {
+                const dbData = await response.json();
+                if (Object.keys(dbData).length > 0) {
+                    baseEfetivo = dbData.efetivo || []; baseAfastamentos = dbData.afastamentos || []; baseViaturas = dbData.viaturas || [];
+                    baseCavalos = dbData.cavalos || []; baseCaes = dbData.caes || []; baseEscalas = dbData.escalas || [];
+                    baseTiposAfast = dbData.tipos_afast || []; baseAvisosPainel = dbData.avisos || []; baseViagens = dbData.viagens || [];
+                    baseEscalasCmtCia = dbData.escalas_cmt_cia || []; 
+                    console.log("✅ Dados carregados EXCLUSIVAMENTE do Banco MySQL com sucesso!");
+                    return; 
+                }
+            }
+        } catch (error) {
+            console.error("⚠️ Servidor offline ou erro de rede.", error);
+        }
+        baseEfetivo = []; baseViaturas = []; baseCavalos = []; baseCaes = []; baseEscalas = []; baseAfastamentos = []; baseAvisosPainel = []; baseViagens = []; baseEscalasCmtCia = [];
+        baseTiposAfast = [{nome: 'Serviço (Externo)', bloqueia: true}, {nome: 'Folga Mensal', bloqueia: true}, {nome: 'Férias', bloqueia: true}, {nome: 'Viagem', bloqueia: true}, {nome: 'Licença Saúde (LSV)', bloqueia: true}, {nome: 'Restrição de Serviço', bloqueia: true}];
+    }
+
+async function salvarLocal(forcarSobrescrita = false) {
+        // Declaramos a variável fora do try para que o catch consiga acessá-la caso dê erro
+        let dadosParaSalvar = {}; 
+
+        try {
+            if (!forcarSobrescrita) {
+                const getRes = await fetch('/api/sync');
+                if (getRes.ok) {
+                    const dbAtualizado = await getRes.json();
+                    const mesclarPorId = (localArray, dbArray) => {
+                        if (!dbArray) return localArray;
+                        let mapLocal = new Map(localArray.map(item => [item.id, item]));
+                        dbArray.forEach(dbItem => {
+                            if (!mapLocal.has(dbItem.id)) { localArray.push(dbItem); }
+                        });
+                        return localArray;
+                    };
+                    baseEfetivo = mesclarPorId(baseEfetivo, dbAtualizado.efetivo);
+                    baseAfastamentos = mesclarPorId(baseAfastamentos, dbAtualizado.afastamentos);
+                    baseViaturas = mesclarPorId(baseViaturas, dbAtualizado.viaturas);
+                    baseCavalos = mesclarPorId(baseCavalos, dbAtualizado.cavalos);
+                    baseCaes = mesclarPorId(baseCaes, dbAtualizado.caes);
+                    baseEscalas = mesclarPorId(baseEscalas, dbAtualizado.escalas);
+                    baseViagens = mesclarPorId(baseViagens, dbAtualizado.viagens);
+                    baseEscalasCmtCia = mesclarPorId(baseEscalasCmtCia, dbAtualizado.escalas_cmt_cia);
+                }
+            }
+
+            // Popula os dados após uma possível mescla com o banco
+            dadosParaSalvar = { 
+                efetivo: baseEfetivo, afastamentos: baseAfastamentos, viaturas: baseViaturas, 
+                cavalos: baseCavalos, caes: baseCaes, escalas: baseEscalas, 
+                tipos_afast: baseTiposAfast, avisos: baseAvisosPainel, viagens: baseViagens,
+                escalas_cmt_cia: baseEscalasCmtCia 
+            };
+            
+            const response = await fetch('/api/sync', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(dadosParaSalvar) 
+            });
+            
+            if (!response.ok) { 
+                alert("⚠️ ERRO CRÍTICO: O servidor recusou a gravação. Contate o TI."); 
+            } else { 
+                console.log("💾 Salvo no Banco MySQL com sucesso!"); 
+            }
+
+        } catch (error) { 
+            console.log("⚠️ Servidor inacessível. Salvando no storage local (fallback offline)"); 
+            
+            // Se o erro aconteceu antes da variável ser preenchida, nós preenchemos ela agora
+            if (Object.keys(dadosParaSalvar).length === 0) {
+                dadosParaSalvar = { 
+                    efetivo: baseEfetivo, afastamentos: baseAfastamentos, viaturas: baseViaturas, 
+                    cavalos: baseCavalos, caes: baseCaes, escalas: baseEscalas, 
+                    tipos_afast: baseTiposAfast, avisos: baseAvisosPainel, viagens: baseViagens,
+                    escalas_cmt_cia: baseEscalasCmtCia 
+                };
+            }
+
+            // Grava os dados no navegador do usuário
+            localStorage.setItem('baep_dados_offline', JSON.stringify(dadosParaSalvar));
+        }
+    }
+
+    function abrirModalCadastroPM() {
+        document.getElementById('cad-pm-re').value = ''; document.getElementById('cad-pm-nome').value = ''; document.getElementById('cad-pm-qra').value = '';
+        document.getElementById('modalCadastroPMRapido').style.display = 'block';
+    }
+
+    function salvarCadastroPMRapido() {
+        let posto = document.getElementById('cad-pm-posto').value; let re = document.getElementById('cad-pm-re').value;
+        let nome = document.getElementById('cad-pm-nome').value.toUpperCase(); let qra = document.getElementById('cad-pm-qra').value.toUpperCase();
+        if(!re || !nome || !qra) return alert("Preencha todos os campos do policial.");
+        let existe = baseEfetivo.find(x => x.re === re); if(existe) return alert("Este RE já está cadastrado no sistema.");
+        baseEfetivo.push({ id: Date.now(), posto: posto, re: re, nome: nome, qra: qra, cia: 'EM', pel: 'Administrativo' });
+        salvarLocal(); atualizarTelas(); document.getElementById('modalCadastroPMRapido').style.display = 'none'; alert("Policial cadastrado com sucesso! Já pode vinculá-lo à escala ou viagem.");
+    }
+
+    // --- FUNÇÕES DE PDF ---
+  
+function gerarRelatorioPadraoPdf(escalasSelecionadas, dataFiltroBase, nomeArquivoExport) {
+        const { jsPDF } = window.jspdf; const doc = new jsPDF();
+        let dataFmt = dataFiltroBase ? dataFiltroBase.split('-').reverse().join('/') : '';
+        const imgEl = document.getElementById('img-logo-nav'); let imgDataToUse = null;
+        try { if(imgEl && imgEl.complete && imgEl.naturalWidth !== 0) { let canvas = document.createElement('canvas'); canvas.width = imgEl.naturalWidth; canvas.height = imgEl.naturalHeight; let ctx = canvas.getContext('2d'); ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(imgEl, 0, 0); imgDataToUse = canvas.toDataURL('image/jpeg'); } } catch(e) { }
+
+        function drawPageHeader() {
+            doc.setDrawColor(0); doc.setLineWidth(0.5); doc.rect(10, 10, 190, 277); 
+            if(imgDataToUse) { doc.addImage(imgDataToUse, 'JPEG', 15, 15, 22, 22); }
+            doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.text("www.policiamilitar.sp.gov.br", 195, 18, { align: "right" }); doc.text("OPM: 608088100", 195, 23, { align: "right" });
+            doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text("POLÍCIA MILITAR DO ESTADO DE SÃO PAULO", 105, 20, { align: "center" }); doc.text("8º BATALHÃO DE AÇÕES ESPECIAIS DE POLÍCIA", 105, 26, { align: "center" }); doc.text("ESCALA DE SERVIÇO DIÁRIA", 105, 32, { align: "center" });
+            if(dataFmt) doc.text(`${dataFmt} - DIURNO / NOTURNO`, 105, 38, { align: "center" });
+            doc.setLineWidth(0.5); doc.line(10, 42, 200, 42);
+        }
+
+        function drawWatermark() { if(imgDataToUse && doc.setGState) { doc.setGState(new doc.GState({opacity: 0.05})); doc.addImage(imgDataToUse, 'JPEG', 55, 90, 100, 100); doc.setGState(new doc.GState({opacity: 1})); } }
+
+        let currentY = 48; drawPageHeader();
+        const autoTableTheme = { theme: 'grid', headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', valign: 'middle', lineWidth: 0.1, lineColor: [0, 0, 0] }, bodyStyles: { textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [0, 0, 0] }, alternateRowStyles: { fillColor: [248, 248, 248] }, styles: { fontSize: 8, cellPadding: 2, font: 'helvetica' }, margin: { left: 14, right: 14 } };
+
+        let agrupadoPorCia = { '1ª CAEP': [], '2ª CAEP': [], 'EM': [], 'Outros': [] };
+        escalasSelecionadas.forEach(esc => { let cia = mapaCia[esc.pelotao] || 'Outros'; agrupadoPorCia[cia].push(esc); });
+
+        for(let cia in agrupadoPorCia) {
+            let escCmt = baseEscalasCmtCia.find(e => e.data === dataFiltroBase && e.cia === cia);
+            
+            if(agrupadoPorCia[cia].length === 0 && !escCmt) continue;
+            
+            if(escCmt) {
+                // Mapeia observações para o Cmt de Cia se houver
+                let txtCmt = escCmt.cmt;
+                let pmCmtObj = baseEfetivo.find(p => matchPm(p, escCmt.cmt));
+                if(pmCmtObj) {
+                    let a = baseAfastamentos.find(x => dataFiltroBase >= x.dataInicio && dataFiltroBase <= x.dataFim && matchPm(pmCmtObj, x.pmDisplay));
+                    if(a) txtCmt += ` (${a.tipo}${a.obs ? `: ${a.obs}` : ''})`;
+                }
+                let pmsCmtText = `CMT: ${txtCmt}`; 
+
+                if(escCmt.mot) {
+                    let txtMot = escCmt.mot;
+                    let pmMotObj = baseEfetivo.find(p => matchPm(p, escCmt.mot));
+                    if(pmMotObj) {
+                        let a = baseAfastamentos.find(x => dataFiltroBase >= x.dataInicio && dataFiltroBase <= x.dataFim && matchPm(pmMotObj, x.pmDisplay));
+                        if(a) txtMot += ` (${a.tipo}${a.obs ? `: ${a.obs}` : ''})`;
+                    }
+                    pmsCmtText += `\nMOT: ${txtMot}`;
+                }
+                
+                if(escCmt.tipo === 'Operacional') {
+                    let txtSeg1 = escCmt.seg1;
+                    if(escCmt.seg1) {
+                        let pmSeg1Obj = baseEfetivo.find(p => matchPm(p, escCmt.seg1));
+                        if(pmSeg1Obj) {
+                            let a = baseAfastamentos.find(x => dataFiltroBase >= x.dataInicio && dataFiltroBase <= x.dataFim && matchPm(pmSeg1Obj, x.pmDisplay));
+                            if(a) txtSeg1 += ` (${a.tipo}${a.obs ? `: ${a.obs}` : ''})`;
+                        }
+                    }
+                    let txtSeg2 = escCmt.seg2;
+                    if(escCmt.seg2) {
+                        let pmSeg2Obj = baseEfetivo.find(p => matchPm(p, escCmt.seg2));
+                        if(pmSeg2Obj) {
+                            let a = baseAfastamentos.find(x => dataFiltroBase >= x.dataInicio && dataFiltroBase <= x.dataFim && matchPm(pmSeg2Obj, x.pmDisplay));
+                            if(a) txtSeg2 += ` (${a.tipo}${a.obs ? `: ${a.obs}` : ''})`;
+                        }
+                    }
+                    pmsCmtText += `\nSEG 1: ${txtSeg1}\nSEG 2: ${txtSeg2}`; 
+                }
+                if(escCmt.vtr) pmsCmtText = `VTR: ${escCmt.vtr}\n${pmsCmtText}`;
+                let horarioStr = (escCmt.hIni && escCmt.hFim) ? `${escCmt.hIni} às ${escCmt.hFim}` : "N/I";
+                
+                let bodyCmt = [["COMANDO CIA", horarioStr, pmsCmtText.toUpperCase()]];
+                doc.autoTable({ ...autoTableTheme, startY: currentY, head: [[ { content: `COMANDANTE DE COMPANHIA - ${cia}`, colSpan: 3, styles: { halign: 'center', fillColor: [200, 200, 200], textColor: [0,0,0], fontSize: 9 } } ], ['TIPO', 'HORÁRIO', 'EFETIVO']], body: bodyCmt, columnStyles: { 0: { cellWidth: 35, halign: 'center', valign: 'middle', fontStyle: 'bold' }, 1: { cellWidth: 30, halign: 'center', valign: 'middle' }, 2: { cellWidth: 107, valign: 'middle' } } });
+                currentY = doc.lastAutoTable.finalY + 8;
+            }
+
+            agrupadoPorCia[cia].forEach(esc => {
+                let body = [];
+                
+                // Processando Equipes / VTRs
+                (esc.equipes || []).forEach(eq => {
+                    let efetivoText = [];
+                    if(eq.vtr) efetivoText.push(`VTR: ${eq.vtr}`); if(eq.cao) efetivoText.push(`K9: ${eq.cao}`); if(eq.cavalo) efetivoText.push(`Cavalo: ${eq.cavalo}`);
+                    
+                    (eq.pms || []).forEach(pm => {
+                        let itemText = pm.toUpperCase();
+                        let pmObj = baseEfetivo.find(p => matchPm(p, pm));
+                        if(pmObj) {
+                            let a = baseAfastamentos.find(x => esc.data >= x.dataInicio && esc.data <= x.dataFim && matchPm(pmObj, x.pmDisplay));
+                            if(a) {
+                                itemText += ` (${a.tipo.toUpperCase()}${a.obs ? `: ${a.obs.toUpperCase()}` : ''})`;
+                            }
+                        }
+                        efetivoText.push(itemText);
+                    });
+                    body.push([ eq.titulo.toUpperCase(), eq.horario || "N/I", efetivoText.join('\n') ]);
+                });
+                
+                // Processando Funções e Apoio
+                if(esc.funcoes && esc.funcoes.length > 0) { 
+                    esc.funcoes.forEach(f => {
+                        let textUpper = f.toUpperCase();
+                        let timeStr = "-"; let finalEfetivo = textUpper;
+                        let match = textUpper.match(/(.*)\s*\((.*?)\):\s*(.*)/);
+                        if(match && match[2].includes('ÀS')) { timeStr = match[2].trim(); finalEfetivo = `${match[1].trim()}: ${match[3].trim()}`; }
+                        
+                        let pmObj = baseEfetivo.find(p => matchPm(p, textUpper));
+                        if(pmObj) {
+                            let a = baseAfastamentos.find(x => esc.data >= x.dataInicio && x.data <= x.dataFim && matchPm(pmObj, x.pmDisplay));
+                            if(a) {
+                                finalEfetivo += ` (${a.tipo.toUpperCase()}${a.obs ? `: ${a.obs.toUpperCase()}` : ''})`;
+                            }
+                        }
+                        body.push([ "FUNÇÕES/APOIO", timeStr, finalEfetivo ]);
+                    });
+                }
+
+                // Cálculo de Folga e Afastados com Observações detalhadas
+                let pAtivoUpper = normalizeStr(esc.pelotao); let cmdtPelString = '';
+                if (pAtivoUpper === '1º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '2º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '1º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO SEG AUT'; else if (pAtivoUpper === '2º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO SEG AUT'; else if (pAtivoUpper === '1º GP MONTADO') cmdtPelString = 'COMANDANTE DO 1º GP MONTADO'; else if (pAtivoUpper === '2º GP CANIL') cmdtPelString = 'COMANDANTE DO 2º GP CANIL'; else if (pAtivoUpper === '3º GP CANIL') cmdtPelString = 'COMANDANTE DO 3º GP CANIL';
+
+                let pmsDoPelotao = [];
+                if (pAtivoUpper !== 'RESERVA DE ARMAS') {
+                    pmsDoPelotao = baseEfetivo.filter(pm => { let pPel = normalizeStr(pm.pel); return pPel === pAtivoUpper || pPel === normalizeStr(cmdtPelString); });
+                }
+
+                let escaladosNoPelotao = [];
+                (esc.equipes || []).forEach(eq => (eq.pms || []).forEach(pm => escaladosNoPelotao.push(pm)));
+                (esc.funcoes || []).forEach(f => escaladosNoPelotao.push(f));
+
+                let afastadosDoPelotao = [];
+                let folgaDoPelotao = [];
+
+                pmsDoPelotao.forEach(pm => { 
+                    let objAfast = baseAfastamentos.find(a => esc.data >= a.dataInicio && esc.data <= a.dataFim && matchPm(pm, a.pmDisplay)); 
+                    let isEscalado = escaladosNoPelotao.some(str => matchPm(pm, str));
+                    
+                    if(objAfast) { 
+                        let linhaAfast = `${pm.posto} ${pm.re} - ${pm.qra} (${objAfast.tipo.toUpperCase()})`;
+                        if(objAfast.obs) {
+                            linhaAfast += ` - MOTIVO/OBS: ${objAfast.obs.toUpperCase()}`;
+                        }
+                        afastadosDoPelotao.push(linhaAfast); 
+                    } else if (!isEscalado) {
+                        folgaDoPelotao.push(`${pm.posto} ${pm.re} - ${pm.qra}`);
+                    }
+                });
+
+                if(folgaDoPelotao.length > 0) {
+                    body.push([ "POLICIAIS DE FOLGA", "-", folgaDoPelotao.join('\n').toUpperCase() ]);
+                }
+                if(afastadosDoPelotao.length > 0) {
+                    body.push([ "AFASTADOS / LEMBRETES", "-", afastadosDoPelotao.join('\n').toUpperCase() ]);
+                }
+
+                if(body.length === 0) return;
+
+                doc.autoTable({ ...autoTableTheme, startY: currentY, head: [[ { content: `ADMINISTRATIVO - 8º BAEP - ${cia} - ${esc.pelotao.toUpperCase()}`, colSpan: 3, styles: { halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 9 } } ], ['TIPO', 'HORÁRIO', 'EFETIVO']], body: body, columnStyles: { 0: { cellWidth: 35, halign: 'center', valign: 'middle', fontStyle: 'bold' }, 1: { cellWidth: 30, halign: 'center', valign: 'middle' }, 2: { cellWidth: 107, valign: 'middle' } }, didDrawPage: function(data) { drawWatermark(); } });
+                currentY = doc.lastAutoTable.finalY + 8;
+                if(currentY > 260) { doc.addPage(); drawPageHeader(); currentY = 48; }
+            });
+        } 
+        doc.save(`${nomeArquivoExport}.pdf`);
+    }
+
+    function atualizarSelectsAfastamento() {
+        let optionsHtml = baseTiposAfast.map(t => `<option value="${t.nome}">${t.nome}</option>`).join('');
+        optionsHtml += `<option value="Outros">Outros...</option>`;
+        if(document.getElementById('afast-tipo')) document.getElementById('afast-tipo').innerHTML = optionsHtml;
+        if(document.getElementById('afast-tipo-rapido')) document.getElementById('afast-tipo-rapido').innerHTML = optionsHtml;
+        let htmlBadges = baseTiposAfast.map((t, idx) => `<span class="badge-afastamento" title="${t.bloqueia ? 'Gera Impedimento' : 'Apenas Lembrete'}">${t.bloqueia ? '⛔' : 'ℹ️'} ${t.nome} <button onclick="deletarTipoAfast(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-weight:bold; margin-left:5px;">X</button></span>`).join('');
+        if(document.getElementById('lista-tipos-afast')) document.getElementById('lista-tipos-afast').innerHTML = htmlBadges;
+    }
+
+    function salvarNovoTipoAfast() { let input = document.getElementById('novo-tipo-afast'); let val = input.value.trim().toUpperCase(); if(!val) return; baseTiposAfast.push({nome: val, bloqueia: document.getElementById('novo-tipo-bloqueia').checked}); input.value = ''; salvarLocal(); atualizarTelas(); }
+    function deletarTipoAfast(idx) { if(confirm("Remover tipo?")) { baseTiposAfast.splice(idx, 1); salvarLocal(true); atualizarTelas(); } }
+    function removerAfastamentoDaEscala(idAfast) { if(confirm("Deseja remover esta Situação Administrativa para liberar o policial na escala?")) { baseAfastamentos = baseAfastamentos.filter(a => a.id !== idAfast); salvarLocal(true); if (document.getElementById('escala-painel-geral').style.display === 'block') { atualizarPainelGestao(); } else { validarEscala(); } } }
+
+    function processarPlanilhaEfetivo(event) {
+        const file = event.target.files[0]; 
+        if (!file) return; const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result); const workbook = XLSX.read(data, {type: 'array'}); const worksheet = workbook.Sheets[workbook.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+            if (json.length <= 1) return alert("Planilha vazia ou fora do padrão.");
+            let importados = 0;
+            for (let i = 1; i < json.length; i++) {
+                const row = json[i]; if (!row || row.length === 0) continue;
+                let posto = row[0]?String(row[0]).trim():''; let re = row[1]?String(row[1]).trim():''; let nome = row[2]?String(row[2]).trim().toUpperCase():''; let qra = row[3]?String(row[3]).trim().toUpperCase():''; let cia = row[4]?String(row[4]).trim():'Não Informada'; let pel = row[5]?String(row[5]).trim():'Não Informado';
+                if (posto && re && nome) { let existe = baseEfetivo.find(pm => pm.re === re); if (!existe) { baseEfetivo.push({ id: Date.now()+i, posto, re, nome, qra: qra||nome.split(' ')[0], cia, pel }); importados++; } }
+            }
+            salvarLocal(); atualizarTelas(); alert(`${importados} policiais importados com sucesso.`); event.target.value = ''; 
+        }; reader.readAsArrayBuffer(file);
+    }
+
+    function verTela(id) { 
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); 
+        if(id === 'moduloP1') { abrirAbaP1('dashboard', document.querySelector('#nav-abas-p1 button')); }
+        if(id === 'moduloEscala') { abrirAbaEscalaRouter('painel', document.querySelector('#nav-abas-escala button')); }
+    }
+
+    function toggleOutros(selectId, inputId) { document.getElementById(inputId).style.display = (document.getElementById(selectId).value === 'Outros') ? 'block' : 'none'; }
+    function prepararLogin(destino) { document.getElementById('loginDestino').value = destino; document.getElementById('titulo-login').innerText = destino === 'gestor' ? 'ACESSO: GESTOR P1' : 'ACESSO: ESCALANTE'; verTela('login'); }
+    
+    function autenticar() {
+        const u = document.getElementById('loginUser').value; const p = document.getElementById('loginPass').value; const d = document.getElementById('loginDestino').value;
+        if(d === 'gestor' && u === 'gestor' && p === 'P1b@ep') { document.getElementById('nav-p1').style.display = 'block'; document.getElementById('nav-p3').style.display = 'block'; document.getElementById('btn-logout').style.display = 'block'; document.querySelectorAll('.btn-login-right:not(#btn-logout)').forEach(b => b.style.display = 'none'); verTela('moduloP1'); }
+        else if(d === 'escalante' && u === 'escalante' && p === 'noventabaep') { document.getElementById('nav-p3').style.display = 'block'; document.getElementById('btn-logout').style.display = 'block'; document.querySelectorAll('.btn-login-right:not(#btn-logout)').forEach(b => b.style.display = 'none'); verTela('moduloEscala'); }
+        else { document.getElementById('loginErro').style.display = 'block'; }
+    }
+    function fazerLogout() { location.reload(); }
+
+    function abrirAbaP1(id, btn) { 
+        if(btn) { document.querySelectorAll('#nav-abas-p1 button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+        document.querySelectorAll('#moduloP1 .tab-content').forEach(c => c.classList.remove('active')); document.getElementById('aba-' + id).classList.add('active'); 
+        if(id === 'dashboard') atualizarDashboardP1();
+        if(id === 'viagens') { document.getElementById('dl-vtr-global').innerHTML = baseViaturas.map(x => `<option value="${x.prefixo} - ${x.modelo}">`).join(''); renderTabelaViagens(); }
+    }
+
+    function novaEscalaCmtCia() {
+        document.getElementById('editId-cmt-cia').value = '';
+        document.getElementById('cmt-cia-data').value = '';
+        document.getElementById('cmt-cia-vtr').value = '';
+        document.getElementById('cmt-cia-hIni').value = '';
+        document.getElementById('cmt-cia-hFim').value = '';
+        document.getElementById('cmt-cia-cmt').value = '';
+        document.getElementById('cmt-cia-mot').value = '';
+        document.getElementById('cmt-cia-seg1').value = '';
+        document.getElementById('cmt-cia-seg2').value = '';
+        document.getElementById('lista-cmt-cia-container').style.display = 'none';
+        document.getElementById('workspace-cmt-cia').style.display = 'block';
+        toggleTipoCmtCia();
+    }
+
+    function fecharWorkspaceCmtCia() {
+        document.getElementById('workspace-cmt-cia').style.display = 'none';
+        document.getElementById('lista-cmt-cia-container').style.display = 'block';
+    }
+
+    function toggleTipoCmtCia() {
+        const tipo = document.getElementById('cmt-cia-tipo').value;
+        document.getElementById('cmt-cia-segurancas').style.display = (tipo === 'Operacional') ? 'block' : 'none';
+    }
+
+    function coletarDadosCmtCia() {
+        const data = document.getElementById('cmt-cia-data').value;
+        const cia = document.getElementById('cmt-cia-sel').value;
+        const tipo = document.getElementById('cmt-cia-tipo').value;
+        const vtr = document.getElementById('cmt-cia-vtr').value;
+        const hIni = document.getElementById('cmt-cia-hIni').value;
+        const hFim = document.getElementById('cmt-cia-hFim').value;
+        const cmt = document.getElementById('cmt-cia-cmt').value;
+        const mot = document.getElementById('cmt-cia-mot').value;
+        const seg1 = document.getElementById('cmt-cia-seg1').value;
+        const seg2 = document.getElementById('cmt-cia-seg2').value;
+
+        return { data, cia, tipo, vtr, hIni, hFim, cmt, mot, seg1, seg2 };
+    }
+
+    function abrirPreviewCmtCia() {
+        const d = coletarDadosCmtCia();
+        if(!d.data || !d.cmt) return alert("Preencha ao menos a Data e o Cmt de Cia.");
+        let txt = `⭐ *COMANDANTE DA ${d.cia}*\n📅 DATA: ${d.data.split('-').reverse().join('/')}\n\n`;
+        txt += `*Tipo:* ${d.tipo}\n`;
+        if(d.hIni && d.hFim) txt += `*Turno:* ${d.hIni} às ${d.hFim}\n`;
+        if(d.vtr) txt += `*VTR:* ${d.vtr}\n`;
+        txt += `👮 Cmt: ${d.cmt}\n`; if(d.mot) txt += `👮 Mot: ${d.mot}\n`;
+        if(d.tipo === 'Operacional') {
+            if(d.seg1) txt += `👮 Seg 1: ${d.seg1}\n`;
+            if(d.seg2) txt += `👮 Seg 2: ${d.seg2}\n`;
+        }
+        document.getElementById('conteudo-preview').innerText = txt.replace(/\*/g, ''); 
+        
+        let btnSave = document.getElementById('btn-save-preview');
+        let oldOnClick = btnSave.getAttribute('onclick');
+        btnSave.setAttribute('onclick', 'document.getElementById("modalPreviewEscala").style.display="none"; salvarEscalaCmtCiaFinal();');
+        
+        document.getElementById('modalPreviewEscala').style.display = 'block';
+
+        setTimeout(() => { btnSave.setAttribute('onclick', 'salvarDaPreVisualizacao()'); }, 100);
+    }
+
+  function salvarEscalaCmtCiaFinal() {
+        const id = document.getElementById('editId-cmt-cia').value;
+        let d = coletarDadosCmtCia();
+        if(!d.data || !d.cmt) return alert("Data e Cmt de Cia são obrigatórios.");
+
+        // Nova Trava de Conflito para Cmt Cia
+        let jaEscalados = obterPmsEscaladosNoDia(d.data, id || 0);
+        let duplicados = [];
+        [d.cmt, d.mot, d.seg1, d.seg2].forEach(pmStr => {
+            if(pmStr) {
+                let reMatch = pmStr.match(/([0-9]{6,7}-[A-Z0-9])/);
+                let pmObj = baseEfetivo.find(x => x.re === (reMatch ? reMatch[1] : ''));
+                if(pmObj && jaEscalados.some(nomeEsc => matchPm(pmObj, nomeEsc))) duplicados.push(pmObj.qra);
+            }
+        });
+        if(duplicados.length > 0) return alert("❌ Não é possível salvar! Os seguintes PMs já estão no pelotão ou reserva: " + duplicados.join(', '));
+
+        let obj = {
+            id: id ? parseInt(id) : Date.now(),
+            ...d
+        };
+
+        if(id) {
+            let idx = baseEscalasCmtCia.findIndex(x => x.id == id);
+            if(idx !== -1) baseEscalasCmtCia[idx] = obj;
+        } else {
+            let existente = baseEscalasCmtCia.find(x => x.data === d.data && x.cia === d.cia);
+            if(existente) {
+                if(confirm("Já existe uma escala de Cmt da " + d.cia + " para esta data. Deseja sobrescrever?")) {
+                    obj.id = existente.id;
+                    baseEscalasCmtCia = baseEscalasCmtCia.filter(x => x.id !== existente.id);
+                } else { return; }
+            }
+            baseEscalasCmtCia.push(obj);
+        }
+
+        salvarLocal();
+        atualizarTelas();
+        alert("Escala de Comando de Companhia salva com sucesso!");
+        fecharWorkspaceCmtCia();
+    }
+    function editarEscalaCmtCia(id) {
+        let esc = baseEscalasCmtCia.find(x => x.id === id); if(!esc) return;
+        document.getElementById('editId-cmt-cia').value = esc.id;
+        document.getElementById('cmt-cia-data').value = esc.data;
+        document.getElementById('cmt-cia-sel').value = esc.cia;
+        document.getElementById('cmt-cia-tipo').value = esc.tipo;
+        document.getElementById('cmt-cia-vtr').value = esc.vtr || '';
+        document.getElementById('cmt-cia-hIni').value = esc.hIni || '';
+        document.getElementById('cmt-cia-hFim').value = esc.hFim || '';
+        document.getElementById('cmt-cia-cmt').value = esc.cmt || '';
+        document.getElementById('cmt-cia-mot').value = esc.mot || '';
+        document.getElementById('cmt-cia-seg1').value = esc.seg1 || '';
+        document.getElementById('cmt-cia-seg2').value = esc.seg2 || '';
+        
+        document.getElementById('lista-cmt-cia-container').style.display = 'none';
+        document.getElementById('workspace-cmt-cia').style.display = 'block';
+        toggleTipoCmtCia();
+    }
+
+    function deletarEscalaCmtCia(id) {
+        if(confirm("Deseja realmente apagar esta escala de Comando de Cia?")) {
+            baseEscalasCmtCia = baseEscalasCmtCia.filter(x => x.id !== id);
+            salvarLocal(true);
+            atualizarTelas();
+        }
+    }
+
+    function renderTabelaCmtCia() {
+        let html = baseEscalasCmtCia.sort((a,b) => b.data.localeCompare(a.data)).map(e => {
+            let dataFmt = e.data.split('-').reverse().join('/');
+            return `<tr>
+                <td>${dataFmt}</td>
+                <td>${e.cia}</td>
+                <td>${e.tipo}</td>
+                <td>
+                    <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                        <button class="btn-sm-edit" onclick="editarEscalaCmtCia(${e.id})">ED</button>
+                        <button class="btn-sm-del" onclick="deletarEscalaCmtCia(${e.id})">X</button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+        if(document.getElementById('tabela-cmt-cia')) document.getElementById('tabela-cmt-cia').innerHTML = html;
+    }
+
+    function atualizarDashboardP1() {
+        let dataFiltro = document.getElementById('dash-date-filter').value; if(!dataFiltro) return;
+        
+        document.getElementById('dash-tot-1caep').innerText = baseEfetivo.filter(p => p.cia === '1ª CAEP').length; 
+        document.getElementById('dash-tot-2caep').innerText = baseEfetivo.filter(p => p.cia === '2ª CAEP').length;
+        
+        let afastadosDoDia = baseAfastamentos.filter(a => dataFiltro >= a.dataInicio && dataFiltro <= a.dataFim); 
+        document.getElementById('dash-tot-afastados').innerText = afastadosDoDia.length;
+        
+        const padroesPelDashboard = [
+            "1º Pelotão de Patrulhamento Tático", "2º Pelotão de Patrulhamento Tático", 
+            "1º GP Montado", "2º GP Canil", "3º GP Canil", 
+            "1º Pel Seg Aut", "2º Pel Seg Aut", "Administrativo", 
+          "Comandante do 1º Pelotão de Patrulhamento", "Comandante do 2º Pelotão de Patrulhamento", 
+            "Comandante do 1º Pelotão Seg Aut", "Comandante do 2º Pelotão Seg Aut",
+            "Comandante da 1ª CAEP", "Comandante da 2ª CAEP"
+        ];
+
+        let pelotoesMap = {}; 
+        baseEfetivo.forEach(p => { 
+            let pelUpper = normalizeStr(p.pel); 
+            let standard = p.pel; 
+            let achou = padroesPelDashboard.find(pad => normalizeStr(pad) === pelUpper); 
+            if(achou) standard = achou; 
+            if(!pelotoesMap[standard]) pelotoesMap[standard] = 0; 
+            pelotoesMap[standard]++; 
+        });
+        
+        let htmlPel = ''; 
+        for(let pel in pelotoesMap) { 
+            htmlPel += `<div class="dash-row"><span>${pel}</span> <strong>${pelotoesMap[pel]}</strong></div>`; 
+        }
+        document.getElementById('dash-lista-pelotoes').innerHTML = htmlPel;
+        
+        let metrics = { 
+            '1º Pelotão de Patrulhamento Tático': { total:0, afastados:0, escalados:0 }, 
+            '2º Pelotão de Patrulhamento Tático': { total:0, afastados:0, escalados:0 }, 
+            '1º GP Montado': { total:0, afastados:0, escalados:0 }, 
+            '2º GP Canil': { total:0, afastados:0, escalados:0 }, 
+            '3º GP Canil': { total:0, afastados:0, escalados:0 }, 
+            '1º Pelotão Seg Aut': { total:0, afastados:0, escalados:0 }, 
+            '2º Pelotão Seg Aut': { total:0, afastados:0, escalados:0 }, 
+            'Comando / Administrativo': { total:0, afastados:0, escalados:0 } 
+        };
+        
+        function getGroup(pel) { 
+            let p = normalizeStr(pel); 
+            if(p.includes("1º PELOTÃO DE PATRULHAMENTO TÁTICO") || p.includes("COMANDANTE DO 1º PELOTÃO DE PATRULHAMENTO")) return '1º Pelotão de Patrulhamento Tático'; 
+            if(p.includes("2º PELOTÃO DE PATRULHAMENTO TÁTICO") || p.includes("COMANDANTE DO 2º PELOTÃO DE PATRULHAMENTO")) return '2º Pelotão de Patrulhamento Tático'; 
+            if(p.includes("1º GP MONTADO")) return '1º GP Montado'; 
+            if(p.includes("2º GP CANIL")) return '2º GP Canil'; 
+            if(p.includes("3º GP CANIL")) return '3º GP Canil'; 
+            if(p.includes("1º PEL SEG AUT") || p.includes("COMANDANTE DO 1º PELOTÃO SEG AUT")) return '1º Pelotão Seg Aut'; 
+            if(p.includes("2º PEL SEG AUT") || p.includes("COMANDANTE DO 2º PELOTÃO SEG AUT")) return '2º Pelotão Seg Aut'; 
+            return 'Comando / Administrativo'; 
+        }
+        
+        baseEfetivo.forEach(pm => { 
+            let g = getGroup(pm.pel); 
+            metrics[g].total++; 
+            let isAfastado = afastadosDoDia.some(a => matchPm(pm, a.pmDisplay)); 
+            if(isAfastado) metrics[g].afastados++; 
+        });
+        
+        let pmsEscaladosHoje = []; 
+        let escalasDoDia = baseEscalas.filter(e => e.data === dataFiltro); 
+        
+        escalasDoDia.forEach(esc => { 
+            (esc.equipes || []).forEach(eq => (eq.pms || []).forEach(pm => pmsEscaladosHoje.push(pm))); 
+            (esc.funcoes || []).forEach(f => pmsEscaladosHoje.push(f)); 
+        });
+        baseEscalasCmtCia.filter(e => e.data === dataFiltro).forEach(c => {
+            if(c.cmt) pmsEscaladosHoje.push(c.cmt); if(c.mot) pmsEscaladosHoje.push(c.mot);
+            if(c.seg1) pmsEscaladosHoje.push(c.seg1); if(c.seg2) pmsEscaladosHoje.push(c.seg2);
+        });
+        
+        baseEfetivo.forEach(pm => { 
+            let g = getGroup(pm.pel); 
+            let isEscalado = pmsEscaladosHoje.some(str => matchPm(pm, str)); 
+            if(isEscalado) metrics[g].escalados++; 
+        });
+
+        let htmlStatus = `<div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--primary); font-weight:bold; border-bottom:1px solid #333; padding-bottom:5px; margin-bottom:5px;"><div style="flex:2">GRUPO</div><div style="flex:1; text-align:center;">LIVRES</div><div style="flex:1; text-align:center;">ESCALADOS</div><div style="flex:1; text-align:center;">PENDENTES</div></div>`;
+        let gLivresTot = 0, gEscaladosTot = 0, gPendentesTot = 0;
+        
+        for(let g in metrics) {
+            if(metrics[g].total === 0) continue; 
+            let livres = metrics[g].total - metrics[g].afastados; 
+            let pendentes = livres - metrics[g].escalados; 
+            if(pendentes < 0) pendentes = 0; 
+            
+            gLivresTot += livres; 
+            gEscaladosTot += metrics[g].escalados; 
+            gPendentesTot += pendentes;
+            
+            htmlStatus += `<div style="display:flex; justify-content:space-between; font-size:0.75rem; border-bottom:1px solid #222; padding:8px 0; align-items:center;"><div style="flex:2; font-weight:bold;">${g}</div><div style="flex:1; text-align:center;">${livres}</div><div style="flex:1; text-align:center; color:var(--success); font-weight:bold;">${metrics[g].escalados}</div><div style="flex:1; text-align:center; color:var(--danger); font-weight:bold;">${pendentes}</div></div>`;
+        }
+        
+        document.getElementById('container-status-diario').innerHTML = htmlStatus;
+        
+        let porcentagem = gLivresTot > 0 ? Math.round((gEscaladosTot / gLivresTot) * 100) : 0; 
+        if (porcentagem > 100) porcentagem = 100;
+        
+        document.getElementById('dash-barra-emprego').style.width = `${porcentagem}%`; 
+        document.getElementById('dash-txt-emprego').innerText = `${porcentagem}% dos disponíveis foram escalados.`;
+    }
+
+    function renderizarMuralAvisos() { let mural = document.getElementById('mural-avisos-painel'); if(!mural) return; if(baseAvisosPainel.length === 0) { mural.innerHTML = "<span style='color:var(--text-dim)'>Nenhum ajuste registrado recentemente.</span>"; return; } mural.innerHTML = baseAvisosPainel.map(txt => `<div class="aviso-item">${txt}</div>`).join(''); }
+
+    function atualizarPainelGestao() {
+        let data = document.getElementById('painel-data').value; if(!data) return; 
+        renderizarMuralAvisos(); 
+        let filtroHierarquia = document.getElementById('pg-filtro-hierarquia').value; let modoFiltro = filtroHierarquia.split('-')[0]; let valorFiltro = filtroHierarquia.split('-')[1];
+        let efetivoFiltrado = baseEfetivo; if(modoFiltro === 'CIA') { efetivoFiltrado = baseEfetivo.filter(p => p.cia === valorFiltro); } else if(modoFiltro === 'PEL') { efetivoFiltrado = baseEfetivo.filter(p => p.pel === valorFiltro); }
+        let totalPm = efetivoFiltrado.length; 
+        let afastadosHoje = baseAfastamentos.filter(a => { if(!(data >= a.dataInicio && data <= a.dataFim)) return false; if(modoFiltro === 'GERAL') return true; return efetivoFiltrado.some(pm => matchPm(pm, a.pmDisplay)); }).length;
+        document.getElementById('pg-tot-pm').innerText = totalPm; document.getElementById('pg-afastados').innerText = afastadosHoje; document.getElementById('pg-aptos').innerText = totalPm - afastadosHoje;
+        
+        let viaturasFiltradas = baseViaturas; let cavalosFiltrados = baseCavalos; let caesFiltrados = baseCaes;
+        if(modoFiltro === 'CIA') { viaturasFiltradas = baseViaturas.filter(v => v.cia === valorFiltro); cavalosFiltrados = baseCavalos.filter(c => c.cia === valorFiltro); caesFiltrados = baseCaes.filter(c => c.cia === valorFiltro); } else if(modoFiltro === 'PEL') { viaturasFiltradas = baseViaturas.filter(v => v.pel === valorFiltro); cavalosFiltrados = baseCavalos.filter(c => c.pel === valorFiltro); caesFiltrados = baseCaes.filter(c => c.pel === valorFiltro); }
+        let totalVtr = viaturasFiltradas.length; let escalasData = baseEscalas.filter(e => e.data === data); let vtrBx = 0; let vtrEmp = 0; let vtrsProcessadas = []; 
+        escalasData.forEach(esc => { if(esc.statusFrota) { esc.statusFrota.forEach(st => { if(!vtrsProcessadas.includes(st.vtr)) { let pertence = viaturasFiltradas.some(v => v.prefixo === st.vtr); if(pertence || modoFiltro === 'GERAL') { if(st.condicao === 'Baixada') vtrBx++; else if(st.condicao === 'Emprestada') vtrEmp++; vtrsProcessadas.push(st.vtr); } } }); } });
+        document.getElementById('pg-tot-vtr').innerText = totalVtr; document.getElementById('pg-vtr-op').innerText = totalVtr - vtrBx - vtrEmp; document.getElementById('pg-vtr-bx').innerText = vtrBx; document.getElementById('pg-vtr-emp').innerText = vtrEmp;
+        document.getElementById('pg-animais').innerText = cavalosFiltrados.length + caesFiltrados.length; document.getElementById('pg-cavalos').innerText = cavalosFiltrados.length; document.getElementById('pg-caes').innerText = caesFiltrados.length;
+        renderizarTabelaPainelGestao(efetivoFiltrado, viaturasFiltradas, cavalosFiltrados, caesFiltrados);
+    }
+
+    function renderizarTabelaPainelGestao(efetivoFilt, vtrFilt, cavaloFilt, caoFilt) {
+        let tipo = document.getElementById('pg-filtro-tipo').value; let termoBusca = document.getElementById('pg-busca-rapida') ? document.getElementById('pg-busca-rapida').value.toUpperCase().trim() : '';
+        let head = document.getElementById('pg-tabela-head'); let body = document.getElementById('pg-tabela-body'); let htmlHead = ''; let htmlBody = '';
+        if(tipo === 'pm') {
+            htmlHead = `<tr><th>POSTO/QRA</th><th>RE</th><th>CIA</th><th>PELOTÃO</th><th>AÇÕES</th></tr>`;
+            efetivoFilt.forEach(p => { let nomeLongo = `${p.posto} ${p.re} - ${p.qra} ${p.nome}`.toUpperCase(); if(termoBusca && !nomeLongo.includes(termoBusca)) return; htmlBody += `<tr><td>${p.posto} ${p.qra}</td><td>${p.re}</td><td>${p.cia}</td><td>${p.pel}</td><td><button class="btn-acao-rapida" onclick="abrirModalAfastRapido('${p.posto} ${p.re} - ${p.qra}')" style="margin-right:5px; background:var(--danger)">Situação</button><button class="btn-sm-edit" onclick="abrirModalEdicaoRapida('pm', ${p.id})">EDITAR</button></td></tr>`; });
+        } else if(tipo === 'vtr') {
+            htmlHead = `<tr><th>PREFIXO</th><th>MODELO</th><th>CIA</th><th>PELOTÃO</th><th>AÇÕES</th></tr>`;
+            vtrFilt.forEach(v => { let textoVtr = `${v.prefixo} ${v.placa} ${v.modelo}`.toUpperCase(); if(termoBusca && !textoVtr.includes(termoBusca)) return; htmlBody += `<tr><td>${v.prefixo}</td><td>${v.modelo}</td><td>${v.cia}</td><td>${v.pel}</td><td><button class="btn-sm-edit" onclick="abrirModalEdicaoRapida('vtr', ${v.id})">EDITAR</button></td></tr>`; });
+        } else if(tipo === 'cavalo') {
+            htmlHead = `<tr><th>NOME</th><th>CIA</th><th>PELOTÃO</th><th>AÇÕES</th></tr>`;
+            cavaloFilt.forEach(c => { if(termoBusca && !c.nome.toUpperCase().includes(termoBusca)) return; htmlBody += `<tr><td>${c.nome}</td><td>${c.cia}</td><td>${c.pel}</td><td><button class="btn-sm-edit" onclick="abrirModalEdicaoRapida('cavalo', ${c.id})">EDITAR</button></td></tr>`; });
+        } else if(tipo === 'cao') {
+            htmlHead = `<tr><th>NOME</th><th>CIA</th><th>PELOTÃO</th><th>AÇÕES</th></tr>`;
+            caoFilt.forEach(c => { if(termoBusca && !c.nome.toUpperCase().includes(termoBusca)) return; htmlBody += `<tr><td>${c.nome}</td><td>${c.cia}</td><td>${c.pel}</td><td><button class="btn-sm-edit" onclick="abrirModalEdicaoRapida('cao', ${c.id})">EDITAR</button></td></tr>`; });
+        }
+        head.innerHTML = htmlHead; body.innerHTML = htmlBody;
+    }
+
+    function abrirModalEdicaoRapida(tipo, id) {
+        document.getElementById('mer-tipo').value = tipo; document.getElementById('mer-id').value = id; document.getElementById('mer-obs').value = ''; let obj;
+        if(tipo === 'pm') { obj = baseEfetivo.find(x => x.id === id); document.getElementById('mer-titulo').innerText = `Ajustar PM: ${obj.qra}`; } else if(tipo === 'vtr') { obj = baseViaturas.find(x => x.id === id); document.getElementById('mer-titulo').innerText = `Ajustar VTR: ${obj.prefixo}`; } else if(tipo === 'cavalo') { obj = baseCavalos.find(x => x.id === id); document.getElementById('mer-titulo').innerText = `Ajustar Cavalo: ${obj.nome}`; } else if(tipo === 'cao') { obj = baseCaes.find(x => x.id === id); document.getElementById('mer-titulo').innerText = `Ajustar K9: ${obj.nome}`; }
+        if(obj) { document.getElementById('mer-cia').value = obj.cia || '1ª CAEP'; document.getElementById('mer-pel').value = obj.pel || 'Administrativo'; } document.getElementById('modalEdicaoRapida').style.display = 'block';
+    }
+
+    function salvarEdicaoRapida() {
+        let tipo = document.getElementById('mer-tipo').value; let id = parseInt(document.getElementById('mer-id').value); let novaCia = document.getElementById('mer-cia').value; let novoPel = document.getElementById('mer-pel').value; let obs = document.getElementById('mer-obs').value.trim(); let obj; let ident = "";
+        if(tipo === 'pm') { obj = baseEfetivo.find(x => x.id === id); ident = obj.qra; } else if(tipo === 'vtr') { obj = baseViaturas.find(x => x.id === id); ident = obj.prefixo;} else if(tipo === 'cavalo') { obj = baseCavalos.find(x => x.id === id); ident = obj.nome;} else if(tipo === 'cao') { obj = baseCaes.find(x => x.id === id); ident = obj.nome;}
+        if(obj) { obj.cia = novaCia; obj.pel = novoPel; if(obs) { let textoAviso = `<div class="aviso-data">${new Date().toLocaleString('pt-BR')} - Ajuste em ${ident}</div>${obs}`; baseAvisosPainel.unshift(textoAviso); if(baseAvisosPainel.length > 20) baseAvisosPainel.pop(); } salvarLocal(); atualizarPainelGestao(); atualizarTelas(); if(document.getElementById('workspace-escala').style.display === 'block') { validarEscala(); } document.getElementById('modalEdicaoRapida').style.display = 'none'; }
+    }
+
+    function deletarRecursoRapido(lista, id) { deletarRecurso(lista, id); }
+function gerarEscalaComandante() {
+       let data = document.getElementById('data-escala-cmt').value; if(!data) return alert('Por favor, selecione uma data.');
+        let escalasDia = baseEscalas.filter(e => e.data === data); 
+        
+        let txt = `*ESCALA CONSOLIDADA - 8º BAEP*\n`; let dataFmt = data.split('-').reverse().join('/'); txt += `📅 *DATA:* ${dataFmt}\n========================\n\n`;
+        
+        let agrupadoPorCia = { '1ª CAEP': [], '2ª CAEP': [], 'EM': [], 'Outros': [] }; 
+        escalasDia.forEach(esc => { let cia = mapaCia[esc.pelotao] || 'Outros'; agrupadoPorCia[cia].push(esc); });
+        
+        // --- ORDENAÇÃO FORÇADA ---
+        const ordemCias = ['1ª CAEP', '2ª CAEP', 'EM', 'Outros'];
+        const ordemPelotoes = { '1º Pelotão de Patrulhamento Tático': 1, '2º Pelotão de Patrulhamento Tático': 2, '1º GP Montado': 3, '2º GP Canil': 4, '3º GP Canil': 5, 'Reserva de Armas': 6, '1º Pel Seg Aut': 7, '2º Pel Seg Aut': 8 };
+
+        ordemCias.forEach(cia => {
+            let escCmt = baseEscalasCmtCia.find(e => e.data === data && e.cia === cia);
+            if(agrupadoPorCia[cia].length === 0 && !escCmt) return; 
+            
+            txt += `🏢 *${cia}*\n------------------------\n`;
+            
+            if(escCmt) {
+                txt += `⭐ *COMANDANTE DA ${cia}*\n`;
+                if(escCmt.hIni && escCmt.hFim) txt += `Turno: ${escCmt.hIni} às ${escCmt.hFim}\n`;
+                if(escCmt.vtr) txt += `VTR: ${escCmt.vtr}\n`;
+                txt += `👮 Cmt: ${escCmt.cmt}\n`; if(escCmt.mot) txt += `👮 Mot: ${escCmt.mot}\n`;
+                if(escCmt.tipo === 'Operacional') {
+                    if(escCmt.seg1) txt += `👮 Seg 1: ${escCmt.seg1}\n`;
+                    if(escCmt.seg2) txt += `👮 Seg 2: ${escCmt.seg2}\n`;
+                }
+                txt += `\n`;
+            }
+
+            // Ordena os pelotões antes de gerar o texto
+            agrupadoPorCia[cia].sort((a, b) => (ordemPelotoes[a.pelotao] || 99) - (ordemPelotoes[b.pelotao] || 99)).forEach(esc => {
+                txt += `📍 *${esc.pelotao.toUpperCase()}*\n\n`;
+                (esc.equipes || []).forEach(eq => { txt += `*${eq.titulo}*\n`; if(eq.horario) txt += `Turno: ${eq.horario}\n`; if(eq.vtr) txt += `VTR: ${eq.vtr}\n`; if(eq.cao) txt += `K9: ${eq.cao}\n`; if(eq.cavalo) txt += `Cavalo: ${eq.cavalo}\n`; (eq.pms || []).forEach(pm => { txt += `👮 ${pm}\n`; }); txt += `\n`; });
+                if(esc.funcoes && esc.funcoes.length > 0) { txt += `*FUNÇÕES E APOIO*\n`; esc.funcoes.forEach(f => { txt += `🔹 ${f}\n`; }); txt += `\n`; }
+                
+                let escaladosNoPelotao = [];
+                (esc.equipes || []).forEach(eq => (eq.pms || []).forEach(pm => escaladosNoPelotao.push(pm)));
+                (esc.funcoes || []).forEach(f => escaladosNoPelotao.push(f));
+
+                let pAtivoUpper = normalizeStr(esc.pelotao); let cmdtPelString = '';
+                if (pAtivoUpper === '1º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '2º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '1º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO SEG AUT'; else if (pAtivoUpper === '2º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO SEG AUT'; else if (pAtivoUpper === '1º GP MONTADO') cmdtPelString = 'COMANDANTE DO 1º GP MONTADO'; else if (pAtivoUpper === '2º GP CANIL') cmdtPelString = 'COMANDANTE DO 2º GP CANIL'; else if (pAtivoUpper === '3º GP CANIL') cmdtPelString = 'COMANDANTE DO 3º GP CANIL';
+
+                let pmsDoPelotao = [];
+                if (pAtivoUpper !== 'RESERVA DE ARMAS') {
+                    pmsDoPelotao = baseEfetivo.filter(pm => { let pPel = normalizeStr(pm.pel); return pPel === pAtivoUpper || pPel === normalizeStr(cmdtPelString); });
+                }
+
+                let afastadosDoPelotao = [];
+                let folgaDoPelotao = [];
+
+                pmsDoPelotao.forEach(pm => { 
+                    let objAfast = baseAfastamentos.find(a => esc.data >= a.dataInicio && esc.data <= a.dataFim && matchPm(pm, a.pmDisplay)); 
+                    let isEscalado = escaladosNoPelotao.some(str => matchPm(pm, str));
+                    
+                    if(objAfast) { 
+                        afastadosDoPelotao.push(`🔹 ${pm.posto} ${pm.re} - ${pm.qra} - ${objAfast.tipo}${objAfast.obs ? ` (${objAfast.obs})` : ''}`); 
+                    } else if (!isEscalado) {
+                        folgaDoPelotao.push(`🔹 ${pm.posto} ${pm.re} - ${pm.qra}`);
+                    }
+                });
+
+                if(folgaDoPelotao.length > 0) { txt += `*POLICIAIS DE FOLGA*\n`; folgaDoPelotao.forEach(f => { txt += `${f}\n`; }); txt += `\n`; }
+                if(afastadosDoPelotao.length > 0) { txt += `*AFASTADOS / LEMBRETES*\n`; afastadosDoPelotao.forEach(af => { txt += `${af}\n`; }); txt += `\n`; }
+            });
+        });
+        textoEscalaCmtAtual = txt; document.getElementById('conteudo-escala-cmt').innerText = txt.replace(/\*/g, ''); document.getElementById('resultado-escala-cmt').style.display = 'block';
+    }
+    function enviarWhatsAppCmt() { if(!textoEscalaCmtAtual) return; window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(textoEscalaCmtAtual + `\n_Relatório Gerado pelo Sistema Integrado_`)}`, '_blank'); }
+    function gerarPdfCmt() { let data = document.getElementById('data-escala-cmt').value; gerarRelatorioPadraoPdf(baseEscalas.filter(e => e.data === data), data, `Escala_Comandante_${data}`); }
+
+    function salvarPM() {
+        const id = document.getElementById('editId-pm').value; let obj = { id: id ? parseInt(id) : Date.now(), posto: document.getElementById('pm-posto').value, re: document.getElementById('pm-re').value, nome: document.getElementById('pm-nome').value.toUpperCase(), qra: document.getElementById('pm-qra').value.toUpperCase(), cia: document.getElementById('pm-cia').value, pel: document.getElementById('pm-pel').value };
+       if(id) { let idx = baseEfetivo.findIndex(x=>x.id==id); if(idx !== -1) baseEfetivo[idx] = obj; } else { baseEfetivo.push(obj); }
+        document.getElementById('editId-pm').value=''; document.getElementById('pm-re').value=''; document.getElementById('pm-nome').value=''; document.getElementById('pm-qra').value=''; salvarLocal(); atualizarTelas(); alert("Policial Salvo com Sucesso!");
+    }
+
+    function editarRecurso(lista, id) {
+        if(lista === 'efetivo') { const o = baseEfetivo.find(x=>x.id==id); document.getElementById('editId-pm').value = o.id; document.getElementById('pm-posto').value = o.posto; document.getElementById('pm-re').value = o.re; document.getElementById('pm-nome').value = o.nome; document.getElementById('pm-qra').value = o.qra; document.getElementById('pm-cia').value = o.cia; document.getElementById('pm-pel').value = o.pel; window.scrollTo(0,0); }
+        if(lista === 'afast') { const o = baseAfastamentos.find(x=>x.id==id); document.getElementById('editId-afast').value = o.id; document.getElementById('afast-pm-busca').value = o.pmDisplay; document.getElementById('afast-tipo').value = o.tipo; document.getElementById('afast-data').value = o.dataInicio; document.getElementById('afast-data-fim').value = o.dataFim; document.getElementById('afast-obs').value = o.obs || ''; window.scrollTo(0,0); }
+        if(lista === 'vtr') { const o = baseViaturas.find(x=>x.id==id); document.getElementById('editId-vtr').value = o.id; document.getElementById('vtr-prefixo').value = o.prefixo; document.getElementById('vtr-placa').value = o.placa; document.getElementById('vtr-modelo').value = o.modelo; document.getElementById('vtr-tipo').value = o.tipo; document.getElementById('vtr-cia').value = o.cia || '1ª CAEP'; document.getElementById('vtr-pel').value = o.pel || '1º Pelotão de Patrulhamento Tático'; window.scrollTo(0,0); }
+        if(lista === 'cavalo') { const o = baseCavalos.find(x=>x.id==id); document.getElementById('editId-cavalo').value = o.id; document.getElementById('cavalo-nome').value = o.nome; document.getElementById('cavalo-cia').value = o.cia || '1ª CAEP'; document.getElementById('cavalo-pel').value = o.pel || '1º GP Montado'; window.scrollTo(0,0); }
+        if(lista === 'cao') { const o = baseCaes.find(x=>x.id==id); document.getElementById('editId-cao').value = o.id; document.getElementById('cao-nome').value = o.nome; document.getElementById('cao-cia').value = o.cia || '1ª CAEP'; document.getElementById('cao-pel').value = o.pel || '2º GP Canil'; window.scrollTo(0,0); }
+    }
+
+    function deletarRecurso(lista, id) {
+        if(!confirm("Tem a certeza que deseja excluir este registo?")) return;
+        if(lista === 'efetivo') baseEfetivo = baseEfetivo.filter(x => x.id != id); 
+        if(lista === 'afast') baseAfastamentos = baseAfastamentos.filter(x => x.id != id); 
+        if(lista === 'vtr') baseViaturas = baseViaturas.filter(x => x.id != id); 
+        if(lista === 'cavalo') baseCavalos = baseCavalos.filter(x => x.id != id); 
+        if(lista === 'cao') baseCaes = baseCaes.filter(x => x.id != id);
+        salvarLocal(true); atualizarTelas(); if(document.getElementById('escala-painel-geral').style.display === 'block') { atualizarPainelGestao(); }
+    }
+    
+    function salvarAfastamentoP1() {
+        const id = document.getElementById('editId-afast').value; const pm = document.getElementById('afast-pm-busca').value; let tipo = document.getElementById('afast-tipo').value; if(tipo === 'Outros') tipo = document.getElementById('afast-outros-p1').value.toUpperCase(); let dataInicioStr = document.getElementById('afast-data').value; let dataFimStr = document.getElementById('afast-data-fim').value; let obs = document.getElementById('afast-obs').value.trim();
+        if (!pm || !tipo || !dataInicioStr) return alert("Preencha Policial, Situação e a Data Inicial."); if (!dataFimStr) dataFimStr = dataInicioStr; if (new Date(dataFimStr + 'T00:00:00') < new Date(dataInicioStr + 'T00:00:00')) return alert("A Data Final não pode ser menor que a Data Inicial.");
+        let obj = { id: id ? parseInt(id) : Date.now(), pmDisplay: pm, tipo: tipo, dataInicio: dataInicioStr, dataFim: dataFimStr, obs: obs };
+        if (id) { let idx = baseAfastamentos.findIndex(x=>x.id==id); if(idx !== -1) baseAfastamentos[idx] = obj; } else { baseAfastamentos.push(obj); }
+        document.getElementById('editId-afast').value=''; document.getElementById('afast-pm-busca').value=''; document.getElementById('afast-outros-p1').value=''; document.getElementById('afast-data').value=''; document.getElementById('afast-data-fim').value=''; document.getElementById('afast-obs').value=''; salvarLocal(); atualizarTelas(); alert("Situação Administrativa Registada com Sucesso!");
+    }
+
+    function salvarViatura() {
+        const id = document.getElementById('editId-vtr').value; let prefixo = document.getElementById('vtr-prefixo').value.toUpperCase(); let placa = document.getElementById('vtr-placa').value.toUpperCase(); let modelo = document.getElementById('vtr-modelo').value.toUpperCase(); let tipo = document.getElementById('vtr-tipo').value; let cia = document.getElementById('vtr-cia').value; let pel = document.getElementById('vtr-pel').value;
+        if(!prefixo) return alert("Prefixo é obrigatório."); let obj = { id: id ? parseInt(id) : Date.now(), prefixo, placa, modelo, tipo, cia, pel }; if(id) { let idx = baseViaturas.findIndex(x=>x.id==id); if(idx !== -1) baseViaturas[idx] = obj; } else { baseViaturas.push(obj); }
+        document.getElementById('editId-vtr').value=''; document.getElementById('vtr-prefixo').value=''; document.getElementById('vtr-placa').value=''; document.getElementById('vtr-modelo').value=''; salvarLocal(); atualizarTelas(); alert("Viatura salva com sucesso!");
+    }
+
+    function salvarCavalo() {
+        const id = document.getElementById('editId-cavalo').value; let nome = document.getElementById('cavalo-nome').value.toUpperCase(); if(!nome) return; let cia = document.getElementById('cavalo-cia').value; let pel = document.getElementById('cavalo-pel').value; let obj = { id: id ? parseInt(id) : Date.now(), nome, cia, pel }; if(id) { let idx = baseCavalos.findIndex(x=>x.id==id); if(idx !== -1) baseCavalos[idx] = obj; } else { baseCavalos.push(obj); }
+        document.getElementById('editId-cavalo').value=''; document.getElementById('cavalo-nome').value=''; salvarLocal(); atualizarTelas(); alert("Cavalo guardado com sucesso!");
+    }
+
+    function salvarCao() {
+        const id = document.getElementById('editId-cao').value; let nome = document.getElementById('cao-nome').value.toUpperCase(); if(!nome) return; let cia = document.getElementById('cao-cia').value; let pel = document.getElementById('cao-pel').value; let obj = { id: id ? parseInt(id) : Date.now(), nome, cia, pel }; if(id) { let idx = baseCaes.findIndex(x=>x.id==id); if(idx !== -1) baseCaes[idx] = obj; } else { baseCaes.push(obj); }
+        document.getElementById('editId-cao').value=''; document.getElementById('cao-nome').value=''; salvarLocal(); atualizarTelas(); alert("K9 guardado com sucesso!");
+    }
+
+    function novaViagemUnificada() { document.getElementById('editId-viagem').value = ''; document.getElementById('viagem-destino').value = ''; document.getElementById('viagem-saida').value = ''; document.getElementById('viagem-retorno').value = ''; document.getElementById('container-equipes-viagem').innerHTML = ''; viagemEqpIdCount = 0; addEquipeViagem(); document.getElementById('lista-viagens-container').style.display = 'none'; document.getElementById('workspace-viagem').style.display = 'block'; }
+    function fecharWorkspaceViagem() { document.getElementById('workspace-viagem').style.display = 'none'; document.getElementById('lista-viagens-container').style.display = 'block'; }
+    function addEquipeViagem() { viagemEqpIdCount++; let html = `<div class="equipe-box" style="border-color: #4da8da;"><h4 style="margin:0 0 10px 0; color:#4da8da;">VIATURA / EQUIPE ${viagemEqpIdCount}</h4><div style="margin-bottom:10px;"><input type="text" list="dl-vtr-global" class="escala-select vtr-select" placeholder="Selecione ou digite a VTR..." style="width:100%;"></div><select class="escala-select cargo-comandante-select"><option value="Comandante de Equipe">Comandante de Equipe</option><option value="Comandante de Pelotão">Comandante de Pelotão</option></select><input type="text" list="dl-efetivo-global" class="escala-select pm-alocado-select" placeholder="Buscar / Selecionar PM..."><label>Motorista</label><input type="text" list="dl-efetivo-global" class="escala-select pm-alocado-select" placeholder="Buscar / Selecionar PM..."><label>Segurança 1</label><input type="text" list="dl-efetivo-global" class="escala-select pm-alocado-select" placeholder="Buscar / Selecionar PM..."><div class="flex-between"><label>Segurança 2</label><button class="btn-acao-rapida" onclick="adicionarEstagiarioViagem(this)">+ Add Integrante</button></div><input type="text" list="dl-efetivo-global" class="escala-select pm-alocado-select" placeholder="Buscar / Selecionar PM..."><button class="btn-sm-del" style="width:100%; margin-top:10px; padding:10px;" onclick="this.parentElement.remove();">REMOVER EQUIPE DA VIAGEM</button></div>`; document.getElementById('container-equipes-viagem').insertAdjacentHTML('beforeend', html); }
+    function adicionarEstagiarioViagem(btnElement) { let divPai = btnElement.parentElement.parentElement; let html = `<label style="color:var(--accent);">Apoio / Extra <button class="btn-sm-del" style="margin-left:10px;" onclick="this.parentElement.nextElementSibling.remove(); this.parentElement.remove();">X</button></label><input type="text" list="dl-efetivo-global" class="escala-select pm-alocado-select" placeholder="Buscar / Selecionar PM...">`; divPai.insertAdjacentHTML('beforeend', html); }
+
+    function coletarDadosViagemEmEdicao() {
+        let dest = document.getElementById('viagem-destino').value.trim(); let saida = document.getElementById('viagem-saida').value; let retorno = document.getElementById('viagem-retorno').value; let equipes = []; let allPms = [];
+        document.querySelectorAll('#container-equipes-viagem .equipe-box').forEach(box => {
+            let vtr = box.querySelector('.vtr-select').value.trim(); let pms = [];
+            box.querySelectorAll('.pm-alocado-select').forEach(sel => {
+                if(sel.value) {
+                    let elementoCargo = sel.previousElementSibling; let cargo = 'Policial'; 
+                    if (elementoCargo) { if (elementoCargo.tagName === 'LABEL') { cargo = elementoCargo.innerText.replace('X', '').trim(); } else if (elementoCargo.classList.contains('flex-between')) { let innerL = elementoCargo.querySelector('label'); if(innerL) cargo = innerL.innerText.replace('X', '').trim(); } else if (elementoCargo.classList.contains('cargo-comandante-select')) { cargo = elementoCargo.value; } }
+                    let val = sel.value; let reMatch = val.match(/([0-9]{6,7}-[A-Z0-9])/); let pmRe = reMatch ? reMatch[1] : ''; let pmObj = baseEfetivo.find(x => x.re === pmRe); if(pmObj) val = `${pmObj.posto} ${pmObj.re} - ${pmObj.qra}`;
+                    pms.push(`${cargo}: ${val}`); allPms.push(val);
+                }
+            });
+            if(pms.length > 0 || vtr) { equipes.push({ vtr, pms }); }
+        });
+        return { destino: dest, saida: saida, retorno: retorno, equipes: equipes, pmsFlat: allPms };
+    }
+
+    function abrirPreviewViagem() { let obj = coletarDadosViagemEmEdicao(); if(!obj.destino || !obj.saida || !obj.retorno) return alert("Preencha Destino, Data/Hora de Saída e Retorno na tela de formulário."); if(obj.equipes.length === 0) return alert("Adicione pelo menos uma viatura/equipe com policiais."); let sFmt = obj.saida.split('T')[0].split('-').reverse().join('/') + ' ' + obj.saida.split('T')[1]; let rFmt = obj.retorno.split('T')[0].split('-').reverse().join('/') + ' ' + obj.retorno.split('T')[1]; let txt = `📍 *MISSÃO / VIAGEM: ${obj.destino.toUpperCase()}*\nSaída: ${sFmt}\nRetorno: ${rFmt}\n\n`; obj.equipes.forEach((eq, idx) => { txt += `*VIATURA ${idx+1}* ${eq.vtr ? `(${eq.vtr})` : ''}\n`; eq.pms.forEach(pm => { txt += `👮 ${pm}\n`; }); txt += `\n`; }); document.getElementById('conteudo-preview-viagem').innerText = txt.replace(/\*/g, ''); document.getElementById('modalPreviewViagem').querySelector('.btn-solid-yellow').setAttribute('onclick', 'salvarDaPreVisualizacaoViagem()'); document.getElementById('modalPreviewViagem').style.display = 'block'; }
+    function salvarDaPreVisualizacaoViagem() { document.getElementById('modalPreviewViagem').style.display = 'none'; salvarViagemFinal(); }
+
+    function salvarViagemFinal() {
+        let id = document.getElementById('editId-viagem').value; let obj = coletarDadosViagemEmEdicao();
+        if(!obj.destino || !obj.saida || !obj.retorno) return alert("Preencha Destino, Data/Hora de Saída e Retorno."); if(obj.equipes.length === 0) return alert("Adicione pelo menos uma viatura com policiais.");
+        let objViagem = { id: id ? parseInt(id) : Date.now(), destino: obj.destino, saida: obj.saida, retorno: obj.retorno, equipes: obj.equipes };
+        if (id) { baseAfastamentos = baseAfastamentos.filter(a => a.viagemId !== objViagem.id); }
+        let dIni = obj.saida.split('T')[0]; let dFim = obj.retorno.split('T')[0];
+        obj.pmsFlat.forEach(pm => { let reMatch = pm.match(/([0-9]{6,7}-[A-Z0-9])/); let pmRe = reMatch ? reMatch[1] : pm; baseAfastamentos.push({ id: Date.now() + Math.random(), viagemId: objViagem.id, pmDisplay: pm, tipo: 'Viagem', dataInicio: dIni, dataFim: dFim, obs: `Destino: ${obj.destino}` }); });
+        if(id) { let idx = baseViagens.findIndex(x=>x.id==objViagem.id); if(idx !== -1) baseViagens[idx] = objViagem; } else { baseViagens.push(objViagem); }
+        salvarLocal(); atualizarTelas(); alert("Viagem Operacional e Afastamentos salvos com sucesso!"); fecharWorkspaceViagem();
+    }
+
+    function editarViagem(id) {
+        let v = baseViagens.find(x => x.id === id); if(!v) return;
+        document.getElementById('editId-viagem').value = v.id; document.getElementById('viagem-destino').value = v.destino; document.getElementById('viagem-saida').value = v.saida; document.getElementById('viagem-retorno').value = v.retorno; document.getElementById('container-equipes-viagem').innerHTML = ''; viagemEqpIdCount = 0;
+        v.equipes.forEach(eq => {
+            addEquipeViagem(); let box = document.getElementById('container-equipes-viagem').lastElementChild; if(eq.vtr) box.querySelector('.vtr-select').value = eq.vtr;
+            let inputsPm = box.querySelectorAll('.pm-alocado-select');
+            eq.pms.forEach((pmStr, idx) => {
+                let p = pmStr.split(': '); let cargo = p[0]; let val = p.slice(1).join(': ');
+                if (idx >= inputsPm.length) { adicionarEstagiarioViagem(box.querySelector('.btn-acao-rapida')); inputsPm = box.querySelectorAll('.pm-alocado-select'); }
+                if(inputsPm[idx]) { let reMatch = val.match(/([0-9]{6,7}-[A-Z0-9])/); let pmRe = reMatch ? reMatch[1] : ''; let pmObj = baseEfetivo.find(x => x.re === pmRe); if(pmObj) val = `${pmObj.posto} ${pmObj.re} - ${pmObj.qra}`; inputsPm[idx].value = val; let prev = inputsPm[idx].previousElementSibling; if(prev && prev.classList.contains('cargo-comandante-select')) prev.value = cargo; }
+            });
+        });
+        document.getElementById('lista-viagens-container').style.display = 'none'; document.getElementById('workspace-viagem').style.display = 'block';
+    }
+
+    function deletarViagem(id) { if(!confirm("Excluir o registro desta viagem? Todos os afastamentos gerados por ela também serão apagados.")) return; baseViagens = baseViagens.filter(v => v.id !== id); baseAfastamentos = baseAfastamentos.filter(a => a.viagemId !== id); salvarLocal(true); atualizarTelas(); }
+    function renderTabelaViagens() { let htmlBase = baseViagens.map(v => { let sFmt = v.saida.replace('T', ' '); let rFmt = v.retorno.replace('T', ' '); return `<tr><td>${v.destino}</td><td>${sFmt}</td><td>${rFmt}</td><td><button class=\"btn-sm-edit\" onclick=\"editarViagem(${v.id})\">ED</button><button class=\"btn-sm-del\" onclick=\"deletarViagem(${v.id})\">X</button><button class=\"btn-acao-rapida\" style=\"background:#25D366; color:#fff;\" onclick=\"compartilharWhatsAppViagem(${v.id})\">WPP</button><button class=\"btn-acao-rapida\" style=\"background:var(--danger); color:#fff;\" onclick=\"gerarPdfViagem(${v.id})\">PDF</button></td></tr>`; }).join(''); if(document.getElementById('tabela-viagens')) document.getElementById('tabela-viagens').innerHTML = htmlBase; }
+    function textoViagemExport(id) { let v = baseViagens.find(x => x.id === id); if(!v) return ""; let sFmt = v.saida.split('T')[0].split('-').reverse().join('/') + ' ' + v.saida.split('T')[1]; let rFmt = v.retorno.split('T')[0].split('-').reverse().join('/') + ' ' + v.retorno.split('T')[1]; let txt = `*MISSÃO / VIAGEM*\n📍 DESTINO: ${v.destino.toUpperCase()}\nSaída: ${sFmt}\nRetorno: ${rFmt}\n\n`; v.equipes.forEach((eq, idx) => { txt += `*VIATURA ${idx+1}* ${eq.vtr ? `(${eq.vtr})` : ''}\n`; eq.pms.forEach(pm => { txt += `👮 ${pm}\n`; }); txt += `\n`; }); return txt; }
+    function compartilharWhatsAppViagem(id) { let txt = textoViagemExport(id); if(!txt) return; window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(txt + `_Gerado pelo Sistema_`)}`, '_blank'); }
+    function gerarPdfViagem(id) { /* PDF generation logic */ let v = baseViagens.find(x => x.id === id); if(!v) return; const { jsPDF } = window.jspdf; const doc = new jsPDF(); const imgEl = document.getElementById('img-logo-nav'); let imgDataToUse = null; try { if(imgEl && imgEl.complete && imgEl.naturalWidth !== 0) { let canvas = document.createElement('canvas'); canvas.width = imgEl.naturalWidth; canvas.height = imgEl.naturalHeight; let ctx = canvas.getContext('2d'); ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(imgEl, 0, 0); imgDataToUse = canvas.toDataURL('image/jpeg'); } } catch(e) {} function drawPageHeader() { doc.setDrawColor(0); doc.setLineWidth(0.5); doc.rect(10, 10, 190, 277); if(imgDataToUse) { doc.addImage(imgDataToUse, 'JPEG', 15, 15, 22, 22); } doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.text("www.policiamilitar.sp.gov.br", 195, 18, { align: "right" }); doc.text("OPM: 608088100", 195, 23, { align: "right" }); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text("POLÍCIA MILITAR DO ESTADO DE SÃO PAULO", 105, 20, { align: "center" }); doc.text("8º BATALHÃO DE AÇÕES ESPECIAIS DE POLÍCIA", 105, 26, { align: "center" }); doc.text("RELATÓRIO DE VIAGEM OPERACIONAL", 105, 32, { align: "center" }); doc.setLineWidth(0.5); doc.line(10, 42, 200, 42); } function drawWatermark() { if(imgDataToUse && doc.setGState) { doc.setGState(new doc.GState({opacity: 0.05})); doc.addImage(imgDataToUse, 'JPEG', 55, 90, 100, 100); doc.setGState(new doc.GState({opacity: 1})); } } drawPageHeader(); let currentY = 48; let sFmt = v.saida.split('T')[0].split('-').reverse().join('/') + ' ' + v.saida.split('T')[1]; let rFmt = v.retorno.split('T')[0].split('-').reverse().join('/') + ' ' + v.retorno.split('T')[1]; doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text(`DESTINO DA MISSÃO:`, 14, currentY); doc.setFont("helvetica", "normal"); doc.text(v.destino.toUpperCase(), 55, currentY); currentY += 6; doc.setFont("helvetica", "bold"); doc.text(`PARTIDA:`, 14, currentY); doc.setFont("helvetica", "normal"); doc.text(sFmt, 35, currentY); doc.setFont("helvetica", "bold"); doc.text(`RETORNO PREVISTO:`, 80, currentY); doc.setFont("helvetica", "normal"); doc.text(rFmt, 122, currentY); currentY += 10; const autoTableTheme = { theme: 'grid', headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', valign: 'middle', lineWidth: 0.1, lineColor: [0, 0, 0] }, bodyStyles: { textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [0, 0, 0] }, alternateRowStyles: { fillColor: [248, 248, 248] }, styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' }, margin: { left: 14, right: 14 } }; let body = []; v.equipes.forEach((eq, idx) => { let eqName = `EQUIPE / VTR ${idx+1}\n${eq.vtr || 'N/I'}`; let pmsText = eq.pms.join('\n').toUpperCase(); body.push([eqName, pmsText]); }); doc.autoTable({ ...autoTableTheme, startY: currentY, head: [['VIATURA / EQUIPE', 'EFETIVO EMPREGADO']], body: body, columnStyles: { 0: { cellWidth: 50, halign: 'center', valign: 'middle', fontStyle: 'bold' }, 1: { valign: 'middle' } }, didDrawPage: function(data) { drawWatermark(); } }); const totalPages = doc.internal.getNumberOfPages(); for (let i = 1; i <= totalPages; i++) { doc.setPage(i); doc.setFontSize(7); doc.setFont("helvetica", "italic"); doc.setTextColor(80, 80, 80); doc.text('"Nós Policiais Militares, sob a proteção de Deus, estamos comprometidos com a defesa da Vida, da Integridade Física e da Dignidade da Pessoa Humana."', 105, 292, { align: "center" }); } doc.save(`Viagem_${v.destino.substring(0, 15).replace(/\s+/g, '_')}.pdf`); }
+    function novaViagemUnificadaEsc() { document.getElementById('editId-viagem-esc').value = ''; document.getElementById('viagem-destino-esc').value = ''; document.getElementById('viagem-saida-esc').value = ''; document.getElementById('viagem-retorno-esc').value = ''; document.getElementById('container-equipes-viagem-esc').innerHTML = ''; viagemEqpIdCountEsc = 0; addEquipeViagemEsc(); document.getElementById('lista-viagens-container-esc').style.display = 'none'; document.getElementById('workspace-viagem-esc').style.display = 'block'; }
+    function fecharWorkspaceViagemEsc() { document.getElementById('workspace-viagem-esc').style.display = 'none'; document.getElementById('lista-viagens-container-esc').style.display = 'block'; }
+    function addEquipeViagemEsc() { viagemEqpIdCountEsc++; let html = `<div class="equipe-box" style="border-color: #4da8da;"><h4 style="margin:0 0 10px 0; color:#4da8da;">VIATURA / EQUIPE ${viagemEqpIdCountEsc}</h4><div style="margin-bottom:10px;"><input type="text" list="dl-vtr-global-esc" class="escala-select vtr-select-esc" placeholder="Selecione ou digite a VTR..." style="width:100%;"></div><select class="escala-select cargo-comandante-select"><option value="Comandante de Equipe">Comandante de Equipe</option><option value="Comandante de Pelotão">Comandante de Pelotão</option></select><input type="text" list="dl-efetivo-global" class="escala-select pm-alocado-select-esc" placeholder="Buscar / Selecionar PM..."><label>Motorista</label><input type="text" list="dl-efetivo-global" class="escala-select pm-alocado-select-esc" placeholder="Buscar / Selecionar PM..."><label>Segurança 1</label><input type="text" list="dl-efetivo-global" class="escala-select pm-alocado-select-esc" placeholder="Buscar / Selecionar PM..."><div class="flex-between"><label>Segurança 2</label><button class="btn-acao-rapida" onclick="adicionarEstagiarioViagemEsc(this)">+ Add Integrante</button></div><input type="text" list="dl-efetivo-global" class="escala-select pm-alocado-select-esc" placeholder="Buscar / Selecionar PM..."><button class="btn-sm-del" style="width:100%; margin-top:10px; padding:10px;" onclick="this.parentElement.remove();">REMOVER EQUIPE DA VIAGEM</button></div>`; document.getElementById('container-equipes-viagem-esc').insertAdjacentHTML('beforeend', html); }
+    function adicionarEstagiarioViagemEsc(btnElement) { let divPai = btnElement.parentElement.parentElement; let html = `<label style="color:var(--accent);">Apoio / Extra <button class="btn-sm-del" style="margin-left:10px;" onclick="this.parentElement.nextElementSibling.remove(); this.parentElement.remove();">X</button></label><input type="text" list="dl-efetivo-global" class="escala-select pm-alocado-select-esc" placeholder="Buscar / Selecionar PM...">`; divPai.insertAdjacentHTML('beforeend', html); }
+    function coletarDadosViagemEmEdicaoEsc() { let dest = document.getElementById('viagem-destino-esc').value.trim(); let saida = document.getElementById('viagem-saida-esc').value; let retorno = document.getElementById('viagem-retorno-esc').value; let equipes = []; let allPms = []; document.querySelectorAll('#container-equipes-viagem-esc .equipe-box').forEach(box => { let vtr = box.querySelector('.vtr-select-esc').value.trim(); let pms = []; box.querySelectorAll('.pm-alocado-select-esc').forEach(sel => { if(sel.value) { let elementoCargo = sel.previousElementSibling; let cargo = 'Policial'; if (elementoCargo) { if (elementoCargo.tagName === 'LABEL') { cargo = elementoCargo.innerText.replace('X', '').trim(); } else if (elementoCargo.classList.contains('flex-between')) { let innerL = elementoCargo.querySelector('label'); if(innerL) cargo = innerL.innerText.replace('X', '').trim(); } else if (elementoCargo.classList.contains('cargo-comandante-select')) { cargo = elementoCargo.value; } } let val = sel.value; let reMatch = val.match(/([0-9]{6,7}-[A-Z0-9])/); let pmRe = reMatch ? reMatch[1] : ''; let pmObj = baseEfetivo.find(x => x.re === pmRe); if(pmObj) val = `${pmObj.posto} ${pmObj.re} - ${pmObj.qra}`; pms.push(`${cargo}: ${val}`); allPms.push(val); } }); if(pms.length > 0 || vtr) { equipes.push({ vtr, pms }); } }); return { destino: dest, saida: saida, retorno: retorno, equipes: equipes, pmsFlat: allPms }; }
+    function abrirPreviewViagemEsc() { let obj = coletarDadosViagemEmEdicaoEsc(); if(!obj.destino || !obj.saida || !obj.retorno) return alert("Preencha Destino, Data/Hora de Saída e Retorno na tela de formulário."); if(obj.equipes.length === 0) return alert("Adicione pelo menos uma viatura/equipe com policiais."); let sFmt = obj.saida.split('T')[0].split('-').reverse().join('/') + ' ' + obj.saida.split('T')[1]; let rFmt = obj.retorno.split('T')[0].split('-').reverse().join('/') + ' ' + obj.retorno.split('T')[1]; let txt = `📍 *MISSÃO / VIAGEM: ${obj.destino.toUpperCase()}*\nSaída: ${sFmt}\nRetorno: ${rFmt}\n\n`; obj.equipes.forEach((eq, idx) => { txt += `*VIATURA ${idx+1}* ${eq.vtr ? `(${eq.vtr})` : ''}\n`; eq.pms.forEach(pm => { txt += `👮 ${pm}\n`; }); txt += `\n`; }); document.getElementById('conteudo-preview-viagem').innerText = txt.replace(/\*/g, ''); document.getElementById('modalPreviewViagem').querySelector('.btn-solid-yellow').setAttribute('onclick', 'salvarDaPreVisualizacaoViagemEsc()'); document.getElementById('modalPreviewViagem').style.display = 'block'; }
+    function salvarDaPreVisualizacaoViagemEsc() { document.getElementById('modalPreviewViagem').style.display = 'none'; salvarViagemFinalEsc(); }
+    function salvarViagemFinalEsc() { let id = document.getElementById('editId-viagem-esc').value; let obj = coletarDadosViagemEmEdicaoEsc(); if(!obj.destino || !obj.saida || !obj.retorno) return alert("Preencha Destino, Data/Hora de Saída e Retorno."); if(obj.equipes.length === 0) return alert("Adicione pelo menos uma viatura com policiais."); let objViagem = { id: id ? parseInt(id) : Date.now(), destino: obj.destino, saida: obj.saida, retorno: obj.retorno, equipes: obj.equipes }; if (id) { baseAfastamentos = baseAfastamentos.filter(a => a.viagemId !== objViagem.id); } let dIni = obj.saida.split('T')[0]; let dFim = obj.retorno.split('T')[0]; obj.pmsFlat.forEach(pm => { let reMatch = pm.match(/([0-9]{6,7}-[A-Z0-9])/); let pmRe = reMatch ? reMatch[1] : pm; baseAfastamentos.push({ id: Date.now() + Math.random(), viagemId: objViagem.id, pmDisplay: pm, tipo: 'Viagem', dataInicio: dIni, dataFim: dFim, obs: `Destino: ${obj.destino}` }); }); if(id) { let idx = baseViagens.findIndex(x=>x.id==objViagem.id); if(idx !== -1) baseViagens[idx] = objViagem; } else { baseViagens.push(objViagem); } salvarLocal(); atualizarTelas(); alert("Viagem Operacional e Afastamentos salvos com sucesso!"); fecharWorkspaceViagemEsc(); }
+    function editarViagemEsc(id) { let v = baseViagens.find(x => x.id === id); if(!v) return; document.getElementById('editId-viagem-esc').value = v.id; document.getElementById('viagem-destino-esc').value = v.destino; document.getElementById('viagem-saida-esc').value = v.saida; document.getElementById('viagem-retorno-esc').value = v.retorno; document.getElementById('container-equipes-viagem-esc').innerHTML = ''; viagemEqpIdCountEsc = 0; v.equipes.forEach(eq => { addEquipeViagemEsc(); let box = document.getElementById('container-equipes-viagem-esc').lastElementChild; if(eq.vtr) box.querySelector('.vtr-select-esc').value = eq.vtr; let inputsPm = box.querySelectorAll('.pm-alocado-select-esc'); eq.pms.forEach((pmStr, idx) => { let p = pmStr.split(': '); let cargo = p[0]; let val = p.slice(1).join(': '); if (idx >= inputsPm.length) { adicionarEstagiarioViagemEsc(box.querySelector('.btn-acao-rapida')); inputsPm = box.querySelectorAll('.pm-alocado-select-esc'); } if(inputsPm[idx]) { let reMatch = val.match(/([0-9]{6,7}-[A-Z0-9])/); let pmRe = reMatch ? reMatch[1] : ''; let pmObj = baseEfetivo.find(x => x.re === pmRe); if(pmObj) val = `${pmObj.posto} ${pmObj.re} - ${pmObj.qra}`; inputsPm[idx].value = val; let prev = inputsPm[idx].previousElementSibling; if(prev && prev.classList.contains('cargo-comandante-select')) prev.value = cargo; } }); }); document.getElementById('lista-viagens-container-esc').style.display = 'none'; document.getElementById('workspace-viagem-esc').style.display = 'block'; }
+    function renderTabelaViagensEsc() { let htmlBase = baseViagens.map(v => { let sFmt = v.saida.replace('T', ' '); let rFmt = v.retorno.replace('T', ' '); return `<tr><td>${v.destino}</td><td>${sFmt}</td><td>${rFmt}</td><td><button class=\"btn-sm-edit\" onclick=\"editarViagemEsc(${v.id})\">ED</button><button class=\"btn-sm-del\" onclick=\"deletarViagem(${v.id})\">X</button><button class=\"btn-acao-rapida\" style=\"background:#25D366; color:#fff;\" onclick=\"compartilharWhatsAppViagem(${v.id})\">WPP</button><button class=\"btn-acao-rapida\" style=\"background:var(--danger); color:#fff;\" onclick=\"gerarPdfViagem(${v.id})\">PDF</button></td></tr>`; }).join(''); if(document.getElementById('tabela-viagens-esc')) document.getElementById('tabela-viagens-esc').innerHTML = htmlBase; }
+
+    function abrirAbaEscalaRouter(aba, btn) {
+        document.querySelectorAll('#nav-abas-escala button').forEach(b => b.classList.remove('active')); if(btn) btn.classList.add('active');
+        document.getElementById('escala-painel-geral').style.display = 'none'; document.getElementById('setup-escala').style.display = 'none'; document.getElementById('workspace-escala').style.display = 'none'; document.getElementById('historico-escala').style.display = 'none'; document.getElementById('escala-viagens-wrapper').style.display = 'none'; document.getElementById('escala-cmt-cia-wrapper').style.display = 'none';
+        if(aba === 'painel') { document.getElementById('escala-painel-geral').style.display = 'block'; atualizarPainelGestao(); } 
+        else if(aba === 'historico') { document.getElementById('historico-escala').style.display = 'block'; } 
+        else if(aba === 'viagens') { document.getElementById('dl-vtr-global-esc').innerHTML = baseViaturas.map(x => `<option value="${x.prefixo} - ${x.modelo}">`).join(''); document.getElementById('escala-viagens-wrapper').style.display = 'block'; renderTabelaViagensEsc(); } 
+        else if(aba === 'cmt-cia') { document.getElementById('escala-cmt-cia-wrapper').style.display = 'block'; renderTabelaCmtCia(); }
+        else { document.getElementById('data-escala').value = ''; pelotaoAtivo = aba; document.getElementById('titulo-setup-escala').innerText = `Montar Escala: ${aba}`; document.getElementById('setup-escala').style.display = 'block'; }
+    }
+
+    function getOpcoesFuncoesApoio() { return `<optgroup label="Operacional"><option value="Reserva de Armas">Reserva de Armas</option><option value="BAEP/COPOM">BAEP/COPOM</option><option value="Sala de Operações">Sala de Operações</option><option value="Disposição da Base">Disposição da Base</option><option value="TAO (Treinamento de Adaptação Operacional)">TAO (Treinamento de Adaptação Operacional)</option><option value="Cavalariço">Cavalariço</option><option value="Ferrador">Ferrador</option><option value="Tratador">Tratador</option><option value="Auxiliar Veterinário">Auxiliar Veterinário</option><option value="Motorista Caminhão (BIG)">Motorista Caminhão (BIG)</option><option value="Manutenção">Manutenção</option></optgroup><optgroup label="Administrativo"><option value="Dejem">Dejem</option><option value="Operação Delegada">Operação Delegada</option><option value="Cursos/Treinamentos">Cursos/Treinamentos</option><option value="Ministério Público">Ministério Público</option></optgroup>`; }
+    function getMenuComandante() { return `<select class="escala-select cargo-comandante-select"><option value="Comandante de Equipe">Comandante de Equipe</option><option value="Comandante de Pelotão">Comandante de Pelotão</option></select>`; }
+    function addFuncaoApoio() { funcIdCount++; let html = `<div class="linha-funcao-dinamica" id="func-row-${funcIdCount}" style="background: rgba(0,0,0,0.3); padding: 10px; border: 1px solid #333; border-radius: 4px; align-items: center;"><select class="escala-select funcao-tipo-select" style="flex: 1 1 180px; margin: 0;"><option value="">Selecione a Função...</option>${getOpcoesFuncoesApoio()}</select><div style="display:flex; align-items:center; gap:5px; flex: 0 1 auto; justify-content: center;"><input type="time" class="hora-inicio-func" title="Hora Início" style="margin:0; padding:8px;"><span style="color:#7a7a7a">às</span><input type="time" class="hora-fim-func" title="Hora Fim" style="margin:0; padding:8px;"></div><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" style="flex: 2 1 200px; margin: 0;" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar PM..."><button class="btn-sm-del" onclick="document.getElementById('func-row-${funcIdCount}').remove(); validarEscala();" style="flex: 0 0 auto; padding: 10px;">X</button></div>`; document.getElementById('container-funcoes-dinamicas').insertAdjacentHTML('beforeend', html); validarEscala(); }
+    function addStatusVtr() { vtrStatusCount++; let html = `<div class="linha-status-vtr flex-between" style="gap:10px; margin-bottom:10px;" id="status-vtr-${vtrStatusCount}"><select class="escala-select status-vtr-select" onchange="validarEscala()" style="flex:2; margin:0;"><option value="">Selecione VTR...</option></select><select class="escala-select status-condicao-select" style="flex:1; margin:0;"><option value="Operando">Operando</option><option value="Baixada">Baixada</option><option value="Emprestada">Emprestada</option> </select><input type="text" class="status-obs-input" placeholder="Local/Observação..." style="flex:3; margin:0;"><button class="btn-sm-del" onclick="document.getElementById('status-vtr-${vtrStatusCount}').remove(); validarEscala();">X</button></div>`; document.getElementById('container-status-frota').insertAdjacentHTML('beforeend', html); validarEscala(); }
+
+function atualizarDataWorkspace(novaData) {
+    if(!novaData) return;
+    dataEscalaAtiva = novaData;
+    document.getElementById('data-escala').value = novaData; // Mantém sincronizado com o campo oculto
+    validarEscala(); // Recalcula afastamentos para a nova data
+}
+    function iniciarEscala(isEdit = false) {
+        if(!isEdit) { dataEscalaAtiva = document.getElementById('data-escala').value; document.getElementById('editId-escala').value = ''; }
+        if(!dataEscalaAtiva) return alert("Por favor, informe a data!");
+document.getElementById('ws-titulo-escala').innerText = `ESCALA: ${pelotaoAtivo}`;
+    document.getElementById('ws-data-escala').value = dataEscalaAtiva;
+        
+        let pAtivoUpper = normalizeStr(pelotaoAtivo); let cmdtPelString = '';
+     if (pAtivoUpper === 'RESERVA DE ARMAS') {
+            pmsEsperados = baseEfetivo.filter(pm => {
+                let postoUpper = (pm.posto || '').toUpperCase().trim();
+                return postoUpper === 'CB PM' || postoUpper === 'SD PM';
+            });
+        } else {
+            if (pAtivoUpper === '1º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO DE PATRULHAMENTO'; 
+            else if (pAtivoUpper === '2º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO DE PATRULHAMENTO'; 
+            else if (pAtivoUpper === '1º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO SEG AUT'; 
+            else if (pAtivoUpper === '2º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO SEG AUT'; 
+            else if (pAtivoUpper === '1º GP MONTADO') cmdtPelString = 'COMANDANTE DO 1º GP MONTADO'; 
+            else if (pAtivoUpper === '2º GP CANIL') cmdtPelString = 'COMANDANTE DO 2º GP CANIL'; 
+            else if (pAtivoUpper === '3º GP CANIL') cmdtPelString = 'COMANDANTE DO 3º GP CANIL';
+            pmsEsperados = baseEfetivo.filter(pm => { let pPel = normalizeStr(pm.pel); return pPel === pAtivoUpper || pPel === normalizeStr(cmdtPelString); });
+        }
+        
+        document.getElementById('setup-escala').style.display = 'none'; document.getElementById('workspace-escala').style.display = 'block'; document.getElementById('container-equipes').innerHTML = ''; document.getElementById('container-funcoes-dinamicas').innerHTML = ''; document.getElementById('container-status-frota').innerHTML = ''; eqpIdCount = 0; hipoIdCount = 0; funcIdCount = 0; vtrStatusCount = 0; 
+        
+        let divBotoes = document.getElementById('botoes-add-equipe');
+        if (pAtivoUpper === 'RESERVA DE ARMAS') { divBotoes.innerHTML = `<button class="btn-outline" onclick="addTurnoReservaArmas()">+ ADD TURNO / HORÁRIO</button>`; if(!isEdit) { addTurnoReservaArmas(); addTurnoReservaArmas(); } } 
+        else if (pAtivoUpper === '1º GP MONTADO') { divBotoes.innerHTML = `<button class="btn-outline" onclick="addEquipeCavalariaVTR()">+ ADD VTR</button> <button class="btn-outline" onclick="addEquipeHipo()">+ ADD HIPO</button>`; if(!isEdit) { addEquipeCavalariaVTR(); addEquipeHipo(); } } 
+        else if (pAtivoUpper.includes('CANIL')) { divBotoes.innerHTML = `<button class="btn-outline" onclick="addEquipeCanil()">+ ADD EQUIPE CANIL</button>`; if(!isEdit) { addEquipeCanil(); } } 
+        else { divBotoes.innerHTML = `<button class="btn-outline" onclick="addEquipeTatico()">+ ADD EQUIPE</button>`; if(!isEdit) { addEquipeTatico(); } }
+        if(!isEdit) validarEscala();
+    }
+
+    function getInputsRelogio() { return `<div style="display:flex; align-items:center; gap:5px;"><input type="time" class="hora-inicio" style="margin:0; padding:8px;"> <span style="color:#7a7a7a">às</span> <input type="time" class="hora-fim" style="margin:0; padding:8px;"></div>`; }
+    function adicionarEstagiario(eqpId) { let divPai = document.getElementById(`equipe-${eqpId}`); if(!divPai) return; if(divPai.querySelector('.estagiario-label')) return alert("O 5º homem já foi adicionado."); let html = `<label class="estagiario-label" style="color:var(--accent);">Estagiário / Apoio <button class="btn-sm-del" style="margin-left:10px;" onclick="this.parentElement.nextElementSibling.remove(); this.parentElement.remove(); validarEscala();">X</button></label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM...">`; divPai.insertAdjacentHTML('beforeend', html); validarEscala(); }
+
+    function addEquipeTatico() { eqpIdCount++; let html = `<div class="equipe-box" id="equipe-${eqpIdCount}"><h4 style="margin:0 0 10px 0;">EQUIPE ${eqpIdCount}</h4><div style="display:flex; gap:10px; margin-bottom:10px;"><select class="escala-select vtr-select" onchange="validarEscala()" style="flex:1;"><option value="">Selecione VTR...</option></select>${getInputsRelogio()}</div>${getMenuComandante()}<input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM..."><label>Motorista</label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM..."><label>Segurança 1</label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM..."><div class="flex-between"><label>Segurança 2</label><button class="btn-acao-rapida" onclick="adicionarEstagiario(${eqpIdCount})">+ Add Estagiário</button></div><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM..."></div>`; document.getElementById('container-equipes').insertAdjacentHTML('beforeend', html); validarEscala(); }
+
+    function addEquipeCanil() {
+        eqpIdCount++;
+        let html = `<div class="equipe-box" id="equipe-${eqpIdCount}" style="border-color: #d35400;">
+            <h4 style="margin:0 0 10px 0; color: #d35400;">EQUIPE K9 ${eqpIdCount}</h4>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <select class="escala-select vtr-select" onchange="validarEscala()" style="flex:1;">
+                    <option value="">Selecione VTR...</option>
+                </select>
+                ${getInputsRelogio()}
+            </div>
+            
+            <div class="grid-2" style="gap:10px; margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px dashed #d35400;">
+                <div><label style="margin-top:0; color:#d35400;">K9 - 1</label><select class="escala-select cao-select" onchange="validarEscala()" style="margin:0;"><option value="">Selecione o K9...</option></select></div>
+                <div><label style="margin-top:0; color:#d35400;">K9 - 2</label><select class="escala-select cao-select" onchange="validarEscala()" style="margin:0;"><option value="">Selecione o K9...</option></select></div>
+            </div>
+
+            ${getMenuComandante()}
+            <input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM...">
+            <label>Motorista</label>
+            <input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM...">
+            <label>Segurança 1</label>
+            <input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM...">
+            <div class="flex-between">
+                <label>Segurança 2</label>
+                <button class="btn-acao-rapida" onclick="adicionarEstagiario(${eqpIdCount})">+ Add Estagiário</button>
+            </div>
+            <input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM...">
+        </div>`;
+        
+        document.getElementById('container-equipes').insertAdjacentHTML('beforeend', html);
+        validarEscala();
+    }   
+
+    function addEquipeCavalariaVTR() { eqpIdCount++; let html = `<div class="equipe-box" id="equipe-${eqpIdCount}"><h4 style="margin:0 0 10px 0;">EQUIPE VTR (CAVALARIA) ${eqpIdCount}</h4><div style="display:flex; gap:10px; margin-bottom:10px;"><select class="escala-select vtr-select" onchange="validarEscala()" style="flex:1;"><option value="">Selecione VTR...</option></select>${getInputsRelogio()}</div>${getMenuComandante()}<input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM..."><label>Motorista</label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM..."><label>Segurança 1</label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM..."><div class="flex-between"><label>Segurança 2</label><button class="btn-acao-rapida" onclick="adicionarEstagiario(${eqpIdCount})">+ Add Estagiário</button></div><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar / Selecionar PM..."></div>`; document.getElementById('container-equipes').insertAdjacentHTML('beforeend', html); validarEscala(); }
+
+    function addEquipeHipo() {
+        hipoIdCount++;
+        let html = `<div class="equipe-box" style="border-color: #72511f;">
+            <h4 style="margin:0 0 10px 0;">EQUIPE HIPO ${hipoIdCount}</h4>
+            <div style="margin-bottom:10px;">${getInputsRelogio()}</div>
+            <p style="font-size:0.75rem; color:var(--text-dim); margin:0 0 5px 0;">Conjuntos (Até 6 Policiais e 6 Cavalos):</p>
+            
+            <div class="grid-2" style="gap:10px; margin-bottom: 5px;">
+                <div><label style="display:none;">Cavalo 1</label><select class="escala-select cavalo-select" onchange="validarEscala()" style="margin:0;"><option value="">Cavalo 1...</option></select></div>
+                <div><label style="display:none;">Policial 1</label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" style="margin:0;" onblur="checarRestricao(this); validarEscala();" placeholder="PM 1..."></div>
+                
+                <div><label style="display:none;">Cavalo 2</label><select class="escala-select cavalo-select" onchange="validarEscala()" style="margin:0;"><option value="">Cavalo 2...</option></select></div>
+                <div><label style="display:none;">Policial 2</label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" style="margin:0;" onblur="checarRestricao(this); validarEscala();" placeholder="PM 2..."></div>
+                
+                <div><label style="display:none;">Cavalo 3</label><select class="escala-select cavalo-select" onchange="validarEscala()" style="margin:0;"><option value="">Cavalo 3...</option></select></div>
+                <div><label style="display:none;">Policial 3</label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" style="margin:0;" onblur="checarRestricao(this); validarEscala();" placeholder="PM 3..."></div>
+                
+                <div><label style="display:none;">Cavalo 4</label><select class="escala-select cavalo-select" onchange="validarEscala()" style="margin:0;"><option value="">Cavalo 4...</option></select></div>
+                <div><label style="display:none;">Policial 4</label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" style="margin:0;" onblur="checarRestricao(this); validarEscala();" placeholder="PM 4..."></div>
+                
+                <div><label style="display:none;">Cavalo 5</label><select class="escala-select cavalo-select" onchange="validarEscala()" style="margin:0;"><option value="">Cavalo 5...</option></select></div>
+                <div><label style="display:none;">Policial 5</label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" style="margin:0;" onblur="checarRestricao(this); validarEscala();" placeholder="PM 5..."></div>
+                
+                <div><label style="display:none;">Cavalo 6</label><select class="escala-select cavalo-select" onchange="validarEscala()" style="margin:0;"><option value="">Cavalo 6...</option></select></div>
+                <div><label style="display:none;">Policial 6</label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" style="margin:0;" onblur="checarRestricao(this); validarEscala();" placeholder="PM 6..."></div>
+            </div>
+        </div>`;
+        
+        document.getElementById('container-equipes').insertAdjacentHTML('beforeend', html);
+        validarEscala();
+    }
+
+    function addTurnoReservaArmas() {
+        eqpIdCount++;
+        let html = `<div class="equipe-box" id="equipe-${eqpIdCount}" style="border-left: 3px solid #3498db;"><h4 style="margin:0 0 10px 0; color: #3498db;">TURNO ${eqpIdCount} - RESERVA DE ARMAS</h4><div style="display:flex; gap:10px; margin-bottom:10px;"><div style="flex:1; display:flex; align-items:center; gap:5px;"><label style="margin:0; width:auto; font-size:0.7rem;">HORÁRIO DO TURNO:</label>${getInputsRelogio()}</div></div><label> Policial 1</label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar Cb ou Sd..."><div class="flex-between"><label> Policial 2</label><button class="btn-acao-rapida" onclick="adicionarMaisPolicialReserva(${eqpIdCount})" style="background:#3498db;">+ Add Integrante Extra</button></div><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar Cb ou Sd..."><button class="btn-sm-del" style="width:100%; margin-top:10px; padding:8px;" onclick="this.parentElement.remove(); validarEscala();">REMOVER ESTE TURNO</button></div>`;
+        document.getElementById('container-equipes').insertAdjacentHTML('beforeend', html);
+        validarEscala();
+    }
+
+    function adicionarMaisPolicialReserva(eqpId) {
+        let divPai = document.getElementById(`equipe-${eqpId}`);
+        if(!divPai) return;
+        let html = `<label style="color:var(--accent);">Policial Extra (Turno) <button class="btn-sm-del" style="margin-left:10px; padding:2px 5px; font-size:0.6rem;" onclick="this.parentElement.nextElementSibling.remove(); this.parentElement.remove(); validarEscala();">X</button></label><input type="text" list="dl-escala-pms" class="escala-select pm-alocado-select" onblur="checarRestricao(this); validarEscala();" placeholder="Buscar Cb ou Sd...">`;
+        divPai.insertAdjacentHTML('beforeend', html);
+        validarEscala();
+    }
+
+    function abrirModalAfastRapido(qra) { qraAlvoAfastamento = qra; document.getElementById('pm-alvo-afast').innerText = qra; document.getElementById('afast-outros-rapido').style.display = 'none'; document.getElementById('afast-obs-rapido').value = ''; document.getElementById('modalAfastRapido').style.display = 'block'; }
+    
+    function confirmarAfastRapido() { 
+        let tipo = document.getElementById('afast-tipo-rapido').value; 
+        if(tipo === 'Outros') tipo = document.getElementById('afast-outros-rapido').value.toUpperCase(); 
+        let obs = document.getElementById('afast-obs-rapido').value.trim(); 
+        if(!tipo) return alert("Por favor, especifique a situação."); 
+        let dataAlvo = dataEscalaAtiva || document.getElementById('painel-data').value; 
+        baseAfastamentos.push({ id: Date.now(), pmDisplay: qraAlvoAfastamento, tipo: tipo, dataInicio: dataAlvo, dataFim: dataAlvo, obs: obs }); 
+        document.getElementById('modalAfastRapido').style.display = 'none'; 
+        document.getElementById('afast-obs-rapido').value = ''; 
+        salvarLocal(); 
+        if (document.getElementById('escala-painel-geral').style.display === 'block') { atualizarPainelGestao(); } else { validarEscala(); } 
+    }
+    
+ function checarRestricao(inputElement) {
+    if(!inputElement.value) return;
+    let data = document.getElementById('ws-data-escala').value || document.getElementById('cmt-cia-data')?.value;
+    let idAtual = document.getElementById('editId-escala').value || document.getElementById('editId-cmt-cia')?.value || 0;
+    
+    let jaEscalados = obterPmsEscaladosNoDia(data, idAtual);
+    
+    // Extrai o RE limpo para não falhar com prefixos ("Motorista:", "Comandante:")
+    let reMatch = inputElement.value.match(/([0-9]{6,7}-[A-Z0-9])/);
+    let pmObj = baseEfetivo.find(x => x.re === (reMatch ? reMatch[1] : ''));
+    
+    if (pmObj) {
+        let estaEscalado = jaEscalados.some(nomeEscalado => matchPm(pmObj, nomeEscalado));
+
+        if (estaEscalado) {
+            alert(`⚠️ ATENÇÃO: O(a) ${pmObj.qra} já está escalado(a) em outro local nesta data (Ex: Cmt Cia, Reserva ou Pelotão)!`);
+            inputElement.value = ''; // Limpa o campo
+            return;
+        }
+
+        let objAfast = baseAfastamentos.find(a => data >= a.dataInicio && data <= a.dataFim && matchPm(pmObj, a.pmDisplay));
+        if (objAfast && (baseTiposAfast.find(t => t.nome === objAfast.tipo)?.bloqueia ?? true)) {
+            if(!confirm(`O PM está afastado (${objAfast.tipo}). Deseja escalar mesmo assim?`)) inputElement.value = '';
+        }
+    }
+}
+
+    function validarEscala() {
+        let inputsPms = document.querySelectorAll('.pm-alocado-select'); let usadosLongo = []; inputsPms.forEach(s => { if(s.value) usadosLongo.push(s.value); });
+        let afastadosNaData = baseAfastamentos.filter(a => dataEscalaAtiva >= a.dataInicio && dataEscalaAtiva <= a.dataFim);
+        
+        // MÁGICA ACONTECENDO AQUI: Voltamos a usar o pmsEsperados (apenas o pelotão filtrado)
+        let datalistOptions = '';
+        pmsEsperados.forEach(pm => { 
+            let pPel = normalizeStr(pm.pel);
+            if (pPel === 'COMANDANTE DA 1ª CAEP' || pPel === 'COMANDANTE DA 2ª CAEP') return; // Mantém o Cmt Cia oculto
+            let nomeCompletoFmt = `${pm.posto} ${pm.re} - ${pm.qra}`; 
+            if (!usadosLongo.includes(nomeCompletoFmt)) { datalistOptions += `<option value="${nomeCompletoFmt}">`; } 
+        });
+        document.getElementById('dl-escala-pms').innerHTML = datalistOptions;
+
+        let termoFiltroPM = document.getElementById('filtro-pms-escala').value.toUpperCase(); let htmlStatusPM = ""; let ulAfast = document.getElementById('lista-afastados-dia'); ulAfast.innerHTML = ''; let countAfastados = 0;
+        
+        pmsEsperados.forEach(pm => {
+            let nomeCurto = `${pm.posto} ${pm.qra}`; let nomeLongoFmt = `${pm.posto} ${pm.re} - ${pm.qra}`;
+            if(termoFiltroPM && !nomeLongoFmt.includes(termoFiltroPM) && !nomeCurto.includes(termoFiltroPM)) return;
+            
+            let objAfastamento = afastadosNaData.find(a => matchPm(pm, a.pmDisplay)); let isAfastado = !!objAfastamento; let isEscalado = usadosLongo.some(str => matchPm(pm, str)); 
+            let tipoInfo = null; let isBloqueante = false; if(isAfastado) { tipoInfo = baseTiposAfast.find(t => t.nome === objAfastamento.tipo); isBloqueante = tipoInfo ? tipoInfo.bloqueia : true; }
+            let isIndisponivel = (isAfastado && isBloqueante) || isEscalado;
+
+            if(isAfastado) { ulAfast.innerHTML += `<li>${nomeCurto} - <strong style="color:var(--primary);">${objAfastamento.tipo}</strong> ${objAfastamento.obs ? `(${objAfastamento.obs})` : ''}</li>`; countAfastados++; }
+            let icone = isAfastado ? '🛏️' : (isEscalado ? '✅' : '⏳'); let corBase = isIndisponivel ? '#ff6b6b' : '#6bff84'; let estiloNome = isIndisponivel ? 'text-decoration: line-through; opacity: 0.7;' : 'text-decoration: none; font-weight: bold;'; let infoExtra = isAfastado ? `<span style="color:var(--primary); font-size:0.85em; font-weight:bold; text-decoration:none !important; display:inline-block; margin-left:5px;">(${objAfastamento.tipo})</span>` : '';
+            
+            let btnAfast = isAfastado ? `<button class="btn-sm-del" onclick="removerAfastamentoDaEscala(${objAfastamento.id})" style="padding:2px 5px;" title="Remover Restrição">X</button>` : '';
+            htmlStatusPM += `<div class="pm-status-item" style="border-left: 3px solid ${corBase}; background: rgba(255,255,255,0.02);"><div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px;"><span>${icone}</span> <span style="color:${corBase}; ${estiloNome}">${nomeCurto}</span>${infoExtra}</div><div style="display:flex; gap:5px;">${btnAfast}${!isIndisponivel ? `<button class="btn-acao-rapida" onclick="abrirModalAfastRapido('${nomeLongoFmt}')">Situação</button>` : ''}</div></div>`;
+        });
+        
+        if(countAfastados === 0) ulAfast.innerHTML = "<span style='color:var(--text-dim)'>Nenhum aviso para a data.</span>"; 
+        document.getElementById('lista-status-efetivo').innerHTML = htmlStatusPM;
+
+        let ciaAtiva = mapaCia[pelotaoAtivo] || '1ª CAEP'; let pAtivoUpperVtr = normalizeStr(pelotaoAtivo);
+        let vtrsEsperadas = baseViaturas.filter(v => normalizeStr(v.cia) === normalizeStr(ciaAtiva) && normalizeStr(v.pel) === pAtivoUpperVtr); 
+        let selectsVtr = document.querySelectorAll('.vtr-select, .status-vtr-select'); let usadasVtr = []; selectsVtr.forEach(s => { if(s.value) usadasVtr.push(s.value); });
+        
+        let isSegAut = pAtivoUpperVtr.includes('SEG AUT');
+        
+        selectsVtr.forEach(select => { 
+            let valorAtual = select.value; let htmlOptions = `<option value="">Selecione VTR...</option>`; 
+            vtrsEsperadas.forEach(vtr => { 
+                if (isSegAut || !(usadasVtr.includes(vtr.prefixo) && valorAtual !== vtr.prefixo)) { htmlOptions += `<option value="${vtr.prefixo}" ${valorAtual === vtr.prefixo ? 'selected' : ''}>${vtr.prefixo} - ${vtr.modelo}</option>`; } 
+            }); 
+            select.innerHTML = htmlOptions; 
+        });
+
+        let termoFiltroVtr = document.getElementById('filtro-vtrs-escala') ? document.getElementById('filtro-vtrs-escala').value.toUpperCase() : ''; let htmlStatusVtr = ""; 
+        vtrsEsperadas.forEach(vtr => { let nomeFmt = `${vtr.prefixo} - ${vtr.modelo}`; if(termoFiltroVtr && !nomeFmt.includes(termoFiltroVtr)) return; let isEscalada = usadasVtr.includes(vtr.prefixo); let corBaseVtr = isEscalada ? '#ff6b6b' : '#6bff84'; let estiloNomeVtr = isEscalada ? 'text-decoration: line-through; opacity: 0.7;' : 'text-decoration: none; font-weight: bold;'; htmlStatusVtr += `<div class="pm-status-item" style="border-left: 3px solid ${corBaseVtr}; background: rgba(255,255,255,0.02);"><div style="display:flex; align-items:center; gap:5px;"><span>${isEscalada ? '✅' : '🚓'}</span> <span style="color:${corBaseVtr}; ${estiloNomeVtr}">${nomeFmt}</span></div></div>`; });
+        if(document.getElementById('lista-status-vtr')) document.getElementById('lista-status-vtr').innerHTML = htmlStatusVtr;
+
+        let cavalosEsperados = baseCavalos.filter(c => normalizeStr(c.cia) === normalizeStr(ciaAtiva) && normalizeStr(c.pel) === pAtivoUpperVtr); 
+        let selectsCavalo = document.querySelectorAll('.cavalo-select'); let usadosCavalo = []; selectsCavalo.forEach(s => { if(s.value) usadosCavalo.push(s.value); });
+        selectsCavalo.forEach(select => { let valorAtual = select.value; let htmlOptions = `<option value="">Cavalo...</option>`; cavalosEsperados.forEach(c => { if (!(usadosCavalo.includes(c.nome) && valorAtual !== c.nome)) { htmlOptions += `<option value="${c.nome}" ${valorAtual === c.nome ? 'selected' : ''}>${c.nome}</option>`; } }); select.innerHTML = htmlOptions; });
+
+        let caesEsperados = baseCaes.filter(c => normalizeStr(c.cia) === normalizeStr(ciaAtiva) && normalizeStr(c.pel) === pAtivoUpperVtr); 
+        let selectsCao = document.querySelectorAll('.cao-select'); let usadosCao = []; selectsCao.forEach(s => { if(s.value) usadosCao.push(s.value); });
+        selectsCao.forEach(select => { let valorAtual = select.value; let htmlOptions = `<option value="">K9...</option>`; caesEsperados.forEach(c => { if (!(usadosCao.includes(c.nome) && valorAtual !== c.nome)) { htmlOptions += `<option value="${c.nome}" ${valorAtual === c.nome ? 'selected' : ''}>${c.nome}</option>`; } }); select.innerHTML = htmlOptions; });
+    }
+
+    function coletarDadosEscalaEmEdicao() {
+        let objEscala = { data: dataEscalaAtiva, pelotao: pelotaoAtivo, equipes: [], funcoes: [], statusFrota: [] };
+        
+        document.querySelectorAll('#container-equipes .equipe-box').forEach(box => {
+            let h4Element = box.querySelector('h4');
+            if(!h4Element) return; 
+            
+            let titulo = h4Element.innerText; 
+            let vtr = box.querySelector('.vtr-select') ? box.querySelector('.vtr-select').value : ''; 
+            
+            let caesArr = [];
+            box.querySelectorAll('.cao-select').forEach(sel => { if(sel.value) caesArr.push(sel.value); });
+            let cao = caesArr.join(' | ');
+            
+            let cavalosArr = [];
+            box.querySelectorAll('.cavalo-select').forEach(sel => { if(sel.value) cavalosArr.push(sel.value); });
+            let cavalo = cavalosArr.join(' | ');
+
+            let hInicio = box.querySelector('.hora-inicio') ? box.querySelector('.hora-inicio').value : ''; 
+            let hFim = box.querySelector('.hora-fim') ? box.querySelector('.hora-fim').value : ''; 
+            let horario = (hInicio && hFim) ? `${hInicio} às ${hFim}` : ''; 
+            let pms = [];
+            
+            box.querySelectorAll('.pm-alocado-select').forEach(sel => {
+                if(sel.value) { 
+                    let elementoCargo = sel.previousElementSibling; 
+                    let cargo = 'Policial'; 
+                    
+                    if (elementoCargo) { 
+                        if (elementoCargo.tagName === 'LABEL') { 
+                            cargo = elementoCargo.innerText.replace('X', '').trim(); 
+                        } else if (elementoCargo.classList.contains('flex-between')) { 
+                            let innerL = elementoCargo.querySelector('label'); 
+                            if(innerL) cargo = innerL.innerText.replace('X', '').trim(); 
+                        } else if (elementoCargo.classList.contains('cargo-comandante-select')) { 
+                            cargo = elementoCargo.value; 
+                        } 
+                    }
+                    
+                    let reMatch = sel.value.match(/([0-9]{6,7}-[A-Z0-9])/); 
+                    let pmRe = reMatch ? reMatch[1] : ''; 
+                    let pmObj = baseEfetivo.find(x => x.re === pmRe); 
+                    
+                    if(pmObj && (pmObj.pel.includes('Comandante da ') || pmObj.pel.includes('Comandante do '))) { 
+                        cargo = pmObj.pel; 
+                    }
+                    
+                    pms.push(`${cargo}: ${sel.value}`); 
+                }
+            });
+            
+            if(pms.length > 0 || vtr || cavalo || cao) { 
+                objEscala.equipes.push({ titulo, vtr, cao, cavalo, horario, pms }); 
+            }
+        });
+
+        document.querySelectorAll('#container-funcoes-dinamicas .linha-funcao-dinamica').forEach(linha => {
+            let funcaoEscolhida = linha.querySelector('.funcao-tipo-select').value; 
+            let pmVal = linha.querySelector('.pm-alocado-select').value; 
+            let hIniFunc = linha.querySelector('.hora-inicio-func') ? linha.querySelector('.hora-inicio-func').value : ''; 
+            let hFimFunc = linha.querySelector('.hora-fim-func') ? linha.querySelector('.hora-fim-func').value : '';
+            
+            if(funcaoEscolhida && pmVal) {
+                let reMatch = pmVal.match(/([0-9]{6,7}-[A-Z0-9])/); 
+                let pmRe = reMatch ? reMatch[1] : ''; 
+                let pmObj = baseEfetivo.find(x => x.re === pmRe); 
+                
+                if(pmObj && (pmObj.pel.includes('Comandante da ') || pmObj.pel.includes('Comandante do '))) { 
+                    funcaoEscolhida = pmObj.pel; 
+                }
+                
+                let timeStr = (hIniFunc && hFimFunc) ? ` (${hIniFunc} às ${hFimFunc})` : ''; 
+                objEscala.funcoes.push(`${funcaoEscolhida}${timeStr}: ${pmVal}`);
+            }
+        });
+        
+        return objEscala;
+    }
+
+function abrirPreviewEscala() {
+        let objEscala = coletarDadosEscalaEmEdicao(); if(!objEscala.data) return alert("Por favor, preencha a data antes de visualizar.");
+        let pAtivoUpper = normalizeStr(objEscala.pelotao); let cia = mapaCia[objEscala.pelotao] || '1ª CAEP'; 
+        
+        let txt = "";
+        
+        let escCmt = baseEscalasCmtCia.find(e => e.data === objEscala.data && e.cia === cia);
+        if(escCmt) {
+            txt += `⭐ *COMANDANTE DA ${cia}*\n`;
+            if(escCmt.hIni && escCmt.hFim) txt += `Turno: ${escCmt.hIni} às ${escCmt.hFim}\n`;
+            if(escCmt.vtr) txt += `VTR: ${escCmt.vtr}\n`;
+            txt += `👮 Cmt: ${escCmt.cmt}\n`; if(escCmt.mot) txt += `👮 Mot: ${escCmt.mot}\n`;
+            if(escCmt.tipo === 'Operacional') {
+                if(escCmt.seg1) txt += `👮 Seg 1: ${escCmt.seg1}\n`;
+                if(escCmt.seg2) txt += `👮 Seg 2: ${escCmt.seg2}\n`;
+            }
+            txt += `\n`;
+        }
+
+        txt += `📍 *${objEscala.pelotao.toUpperCase()}*\n📅 DATA: ${objEscala.data.split('-').reverse().join('/')}\n\n`;
+        objEscala.equipes.forEach(eq => { txt += `*${eq.titulo}*\n`; if(eq.horario) txt += `Turno: ${eq.horario}\n`; if(eq.vtr) txt += `VTR: ${eq.vtr}\n`; if(eq.cao) txt += `K9: ${eq.cao}\n`; if(eq.cavalo) txt += `Cavalo: ${eq.cavalo}\n`; eq.pms.forEach(pm => { txt += `👮 ${pm}\n`; }); txt += `\n`; });
+        if(objEscala.funcoes && objEscala.funcoes.length > 0) { txt += `*FUNÇÕES E APOIO*\n`; objEscala.funcoes.forEach(f => { txt += `🔹 ${f}\n`; }); }
+        
+        let cmdtPelString = '';
+        if (pAtivoUpper === '1º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '2º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '1º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO SEG AUT'; else if (pAtivoUpper === '2º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO SEG AUT'; else if (pAtivoUpper === '1º GP MONTADO') cmdtPelString = 'COMANDANTE DO 1º GP MONTADO'; else if (pAtivoUpper === '2º GP CANIL') cmdtPelString = 'COMANDANTE DO 2º GP CANIL'; else if (pAtivoUpper === '3º GP CANIL') cmdtPelString = 'COMANDANTE DO 3º GP CANIL';
+        
+        let pmsDoPelotao = baseEfetivo.filter(pm => { let pPel = normalizeStr(pm.pel); return pPel === pAtivoUpper || pPel === normalizeStr(cmdtPelString); });
+        
+        let escaladosNoPelotao = [];
+        objEscala.equipes.forEach(eq => eq.pms.forEach(pm => escaladosNoPelotao.push(pm)));
+        objEscala.funcoes.forEach(f => escaladosNoPelotao.push(f));
+
+        let afastadosDoPelotao = [];
+        let folgaDoPelotao = [];
+        
+        pmsDoPelotao.forEach(pm => { 
+            let objAfast = baseAfastamentos.find(a => objEscala.data >= a.dataInicio && objEscala.data <= a.dataFim && matchPm(pm, a.pmDisplay)); 
+            let isEscalado = escaladosNoPelotao.some(str => matchPm(pm, str));
+            if(objAfast) { 
+                afastadosDoPelotao.push(`🔹 ${pm.posto} ${pm.re} - ${pm.qra} - ${objAfast.tipo}${objAfast.obs ? ` (${objAfast.obs})` : ''}`); 
+            } else if (!isEscalado) {
+                folgaDoPelotao.push(`🔹 ${pm.posto} ${pm.re} - ${pm.qra}`);
+            }
+        });
+
+        if(folgaDoPelotao.length > 0) { txt += `*POLICIAIS DE FOLGA*\n`; folgaDoPelotao.forEach(f => { txt += `${f}\n`; }); txt += `\n`; }
+        if(afastadosDoPelotao.length > 0) { txt += `*AFASTADOS / LEMBRETES*\n`; afastadosDoPelotao.forEach(af => { txt += `${af}\n`; }); txt += `\n`; }
+        
+        document.getElementById('conteudo-preview').innerText = txt.replace(/\*/g, ''); document.getElementById('modalPreviewEscala').style.display = 'block';
+    }
+    function salvarDaPreVisualizacao() { document.getElementById('modalPreviewEscala').style.display = 'none'; salvarEscalaFinal(); }
+function validarEscalaFinal() {
+    let data = document.getElementById('ws-data-escala').value;
+    let idAtual = document.getElementById('editId-escala').value || 0;
+    let jaEscalados = obterPmsEscaladosNoDia(data, idAtual);
+    
+    let duplicados = [];
+    document.querySelectorAll('.pm-alocado-select').forEach(input => {
+        if(input.value) {
+            let reMatch = input.value.match(/([0-9]{6,7}-[A-Z0-9])/);
+            let pmObj = baseEfetivo.find(x => x.re === (reMatch ? reMatch[1] : ''));
+            if(pmObj && jaEscalados.some(nomeEsc => matchPm(pmObj, nomeEsc))) {
+                duplicados.push(pmObj.qra);
+            }
+        }
+    });
+
+    if(duplicados.length > 0) {
+        alert("❌ Não é possível salvar! Os seguintes PMs já estão escalados em outro local: " + duplicados.join(', '));
+        return false;
+    }
+    return true;
+}
+ function salvarEscalaFinal() {
+        const id = document.getElementById('editId-escala').value;
+        dataEscalaAtiva = document.getElementById('data-escala').value; 
+        let objEscala = coletarDadosEscalaEmEdicao();
+        objEscala.data = dataEscalaAtiva; 
+        
+        if(!objEscala.data) return alert("Informe a data antes de salvar!");
+
+        let equipeSemHorario = objEscala.equipes.some(eq => !eq.horario || eq.horario === "");
+        if (equipeSemHorario) {
+            if(!confirm("⚠️ ATENÇÃO: Há equipe(s) nesta escala sem o horário (turno) definido. Deseja salvar a escala mesmo assim?")) return; 
+        }
+        
+        let pAtivoUpper = normalizeStr(pelotaoAtivo); let cmdtPelString = '';
+        let esperados = [];
+        if (pAtivoUpper !== 'RESERVA DE ARMAS') {
+            if (pAtivoUpper === '1º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '2º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '1º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO SEG AUT'; else if (pAtivoUpper === '2º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO SEG AUT'; else if (pAtivoUpper === '1º GP MONTADO') cmdtPelString = 'COMANDANTE DO 1º GP MONTADO'; else if (pAtivoUpper === '2º GP CANIL') cmdtPelString = 'COMANDANTE DO 2º GP CANIL'; else if (pAtivoUpper === '3º GP CANIL') cmdtPelString = 'COMANDANTE DO 3º GP CANIL';
+            esperados = baseEfetivo.filter(pm => { let pPel = normalizeStr(pm.pel); return pPel === pAtivoUpper || pPel === normalizeStr(cmdtPelString); });
+        }
+        
+        let afastadosHoje = baseAfastamentos.filter(a => objEscala.data >= a.dataInicio && objEscala.data <= a.dataFim);
+        let pmsEscalados = []; objEscala.equipes.forEach(eq => eq.pms.forEach(pm => pmsEscalados.push(pm))); objEscala.funcoes.forEach(f => pmsEscalados.push(f));
+        
+        let faltam = [];
+        esperados.forEach(pm => { 
+            let isAfast = afastadosHoje.some(a => matchPm(pm, a.pmDisplay)); 
+            let isEsc = pmsEscalados.some(str => matchPm(pm, str)); 
+            if(!isAfast && !isEsc) faltam.push(pm); 
+        });
+        
+        if (faltam.length > 0) { 
+            let querFolga = confirm(`⚠️ Há ${faltam.length} policial(is) deste pelotão sem escala lançada.\n\nDeseja lançá-los automaticamente como 'Folga'?\n\n(OK = Lança Folga e Salva | Cancelar = Apenas Salva Escala)`);
+            if (querFolga) {
+                faltam.forEach(pm => {
+                    baseAfastamentos.push({
+                        id: Date.now() + Math.random(),
+                        pmDisplay: `${pm.posto} ${pm.re} - ${pm.qra}`,
+                        tipo: 'Folga', // Alterado aqui de 'Folga Mensal' para 'Folga'
+                        dataInicio: objEscala.data,
+                        dataFim: objEscala.data,
+                        obs: 'Lançamento Automático'
+                    });
+                });
+            }
+        }
+
+        if(!validarEscalaFinal()) return; // Chama a trava final
+
+        document.querySelectorAll('#container-status-frota .linha-status-vtr').forEach(linha => { let vtr = linha.querySelector('.status-vtr-select').value; let condicao = linha.querySelector('.status-condicao-select').value; let obs = linha.querySelector('.status-obs-input').value.trim(); if(vtr) objEscala.statusFrota.push({vtr, condicao, obs}); });
+        
+        let targetId = id ? parseInt(id) : null;
+        let existente = baseEscalas.find(e => e.data === objEscala.data && normalizeStr(e.pelotao) === normalizeStr(objEscala.pelotao) && e.id !== targetId);
+
+        if (existente) { alert("Já existe uma escala para este Pelotão nesta data. Edite ou exclua a antiga."); return; }
+        objEscala.id = targetId || Date.now();
+        if (targetId) { let idx = baseEscalas.findIndex(x => x.id === targetId); if(idx !== -1) baseEscalas[idx] = objEscala; } else { baseEscalas.push(objEscala); }
+        
+        salvarLocal(); 
+        alert("Escala Salva com Sucesso!"); 
+        atualizarTelas(); 
+        abrirAbaEscalaRouter('historico', document.querySelector('#nav-abas-escala button:last-child'));
+    }
+
+    function editarEscala(id) {
+        const esc = baseEscalas.find(e => e.id === id); if(!esc) return; 
+        
+        pelotaoAtivo = esc.pelotao; 
+        dataEscalaAtiva = esc.data; 
+        
+        document.getElementById('data-escala').value = esc.data; 
+        document.getElementById('editId-escala').value = esc.id;
+    document.getElementById('ws-titulo-escala').innerText = `EDITANDO: ${esc.pelotao}`;
+    document.getElementById('ws-data-escala').value = esc.data;
+        
+        document.getElementById('data-escala').onchange = function() {
+            dataEscalaAtiva = this.value;
+            validarEscala();
+        };
+
+        document.getElementById('container-equipes').innerHTML = ''; document.getElementById('container-funcoes-dinamicas').innerHTML = ''; document.getElementById('container-status-frota').innerHTML = ''; eqpIdCount = 0; hipoIdCount = 0; funcIdCount = 0; vtrStatusCount = 0;
+        let pAtivoUpper = normalizeStr(pelotaoAtivo); let cmdtPelString = '';
+        
+      if (pAtivoUpper === 'RESERVA DE ARMAS') {
+            pmsEsperados = baseEfetivo.filter(pm => {
+                let postoUpper = (pm.posto || '').toUpperCase().trim();
+                return postoUpper === 'CB PM' || postoUpper === 'SD PM';
+            });
+        } else {
+            if (pAtivoUpper === '1º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '2º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '1º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO SEG AUT'; else if (pAtivoUpper === '2º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO SEG AUT'; else if (pAtivoUpper === '1º GP MONTADO') cmdtPelString = 'COMANDANTE DO 1º GP MONTADO'; else if (pAtivoUpper === '2º GP CANIL') cmdtPelString = 'COMANDANTE DO 2º GP CANIL'; else if (pAtivoUpper === '3º GP CANIL') cmdtPelString = 'COMANDANTE DO 3º GP CANIL';
+            pmsEsperados = baseEfetivo.filter(pm => { let pPel = normalizeStr(pm.pel); return pPel === pAtivoUpper || pPel === normalizeStr(cmdtPelString); });
+        }
+        
+        let divBotoes = document.getElementById('botoes-add-equipe');
+        if (pAtivoUpper === 'RESERVA DE ARMAS') { divBotoes.innerHTML = `<button class="btn-outline" onclick="addTurnoReservaArmas()">+ ADD TURNO / HORÁRIO</button>`; } 
+        else if (pAtivoUpper === '1º GP MONTADO') { divBotoes.innerHTML = `<button class="btn-outline" onclick="addEquipeCavalariaVTR()">+ ADD VTR</button> <button class="btn-outline" onclick="addEquipeHipo()">+ ADD HIPO</button>`; } 
+        else if (pAtivoUpper.includes('CANIL')) { divBotoes.innerHTML = `<button class="btn-outline" onclick="addEquipeCanil()">+ ADD EQUIPE CANIL</button>`; } 
+        else { divBotoes.innerHTML = `<button class="btn-outline" onclick="addEquipeTatico()">+ ADD EQUIPE</button>`; }
+        
+        document.getElementById('setup-escala').style.display = 'none'; document.getElementById('workspace-escala').style.display = 'block';
+
+        esc.equipes.forEach(eq => {
+            if(pAtivoUpper === 'RESERVA DE ARMAS') addTurnoReservaArmas();
+            else if(eq.titulo.includes('HIPO')) addEquipeHipo(); 
+            else if(eq.titulo.includes('CANIL')) addEquipeCanil(); 
+            else if(eq.titulo.includes('CAVALARIA')) addEquipeCavalariaVTR(); 
+            else addEquipeTatico();
+            
+            let box = document.getElementById('container-equipes').lastElementChild; box.querySelector('h4').innerText = eq.titulo;
+            if(eq.vtr && box.querySelector('.vtr-select')) { box.querySelector('.vtr-select').innerHTML = `<option value="${eq.vtr}">${eq.vtr}</option>`; box.querySelector('.vtr-select').value = eq.vtr; }
+            if(eq.cao) {
+                let caoList = eq.cao.split(' | '); let caoSelects = box.querySelectorAll('.cao-select');
+                caoList.forEach((c, i) => { if(caoSelects[i] && c) { caoSelects[i].innerHTML = `<option value="${c}">${c}</option>`; caoSelects[i].value = c; } });
+            }
+            if(eq.cavalo) {
+                let cavList = eq.cavalo.split(' | '); let cavSelects = box.querySelectorAll('.cavalo-select');
+                cavList.forEach((c, i) => { if(cavSelects[i] && c) { cavSelects[i].innerHTML = `<option value="${c}">${c}</option>`; cavSelects[i].value = c; } });
+            }
+            if(eq.horario && eq.horario !== "N/I") { let parts = eq.horario.split(' às '); if(parts.length === 2) { box.querySelector('.hora-inicio').value = parts[0]; box.querySelector('.hora-fim').value = parts[1]; } }
+            let inputsPm = box.querySelectorAll('.pm-alocado-select');
+            
+            eq.pms.forEach((pmStr, idx) => {
+                let p = pmStr.split(': '); let cargo = p[0]; let val = p.slice(1).join(': ');
+                
+                if (idx >= inputsPm.length) { 
+                    if (pAtivoUpper === 'RESERVA DE ARMAS') adicionarMaisPolicialReserva(eqpIdCount);
+                    else adicionarEstagiario(eqpIdCount); 
+                    inputsPm = box.querySelectorAll('.pm-alocado-select'); 
+                }
+                
+                if(inputsPm[idx]) { let reMatch = val.match(/([0-9]{6,7}-[A-Z0-9])/); let pmRe = reMatch ? reMatch[1] : ''; let pmObj = baseEfetivo.find(x => x.re === pmRe); if(pmObj) val = `${pmObj.posto} ${pmObj.re} - ${pmObj.qra}`; inputsPm[idx].value = val; let prev = inputsPm[idx].previousElementSibling; if(prev && prev.classList.contains('cargo-comandante-select')) prev.value = cargo; }
+            });
+        });
+
+        if(esc.funcoes) {
+            esc.funcoes.forEach(funcStr => {
+                let p = funcStr.split(': '); let funcaoFull = p[0]; let val = p.slice(1).join(': ');
+                let timeMatch = funcaoFull.match(/(.*) \((.*) às (.*)\)/); let funcName = funcaoFull; let hIni = ''; let hFim = '';
+                if (timeMatch) { funcName = timeMatch[1].trim(); hIni = timeMatch[2]; hFim = timeMatch[3]; }
+                let reMatch = val.match(/([0-9]{6,7}-[A-Z0-9])/); let pmRe = reMatch ? reMatch[1] : ''; let pmObj = baseEfetivo.find(x => x.re === pmRe); if(pmObj) val = `${pmObj.posto} ${pmObj.re} - ${pmObj.qra}`;
+                addFuncaoApoio(); let row = document.getElementById('container-funcoes-dinamicas').lastElementChild; row.querySelector('.funcao-tipo-select').value = funcName; row.querySelector('.pm-alocado-select').value = val;
+                if(hIni && row.querySelector('.hora-inicio-func')) row.querySelector('.hora-inicio-func').value = hIni; if(hFim && row.querySelector('.hora-fim-func')) row.querySelector('.hora-fim-func').value = hFim;
+            });
+        }
+
+        if(esc.statusFrota) { esc.statusFrota.forEach(st => { addStatusVtr(); let row = document.getElementById('container-status-frota').lastElementChild; row.querySelector('.status-vtr-select').innerHTML = `<option value="${st.vtr}">${st.vtr}</option>`; row.querySelector('.status-vtr-select').value = st.vtr; row.querySelector('.status-condicao-select').value = st.condicao; row.querySelector('.status-obs-input').value = st.obs; }); }
+        setTimeout(validarEscala, 500); alert("Escala carregada com sucesso! Altere apenas o necessário e clique em salvar.");
+    }
+    
+    function deletarEscala(id) { if(confirm("Tem a certeza que deseja excluir esta escala permanentemente?")) { baseEscalas = baseEscalas.filter(x => x.id !== id); salvarLocal(true); atualizarTelas(); if(document.getElementById('escala-painel-geral').style.display === 'block') { atualizarPainelGestao(); } } }
+    
+    function toggleAllChecks(source) { document.querySelectorAll('.check-escala').forEach(cb => cb.checked = source.checked); }
+
+    function gerarTextoEscalas(selecionadas) {
+       let agrupadoPorData = {}; selecionadas.forEach(esc => { if(!agrupadoPorData[esc.data]) agrupadoPorData[esc.data] = []; agrupadoPorData[esc.data].push(esc); }); 
+        let txt = `*ESCALA 8º BAEP*\n\n`;
+        
+        const ordemCias = ['1ª CAEP', '2ª CAEP', 'EM', 'Outros'];
+        const ordemPelotoes = { '1º Pelotão de Patrulhamento Tático': 1, '2º Pelotão de Patrulhamento Tático': 2, '1º GP Montado': 3, '2º GP Canil': 4, '3º GP Canil': 5, 'Reserva de Armas': 6, '1º Pel Seg Aut': 7, '2º Pel Seg Aut': 8 };
+
+        for(let data in agrupadoPorData) {
+            txt += `📅 *DATA:* ${data.split('-').reverse().join('/')}\n========================\n\n`; 
+            let agrupadoPorCia = { '1ª CAEP': [], '2ª CAEP': [], 'Outros': [], 'EM': [] }; agrupadoPorData[data].forEach(esc => { let cia = mapaCia[esc.pelotao] || 'Outros'; agrupadoPorCia[cia].push(esc); });
+            
+            ordemCias.forEach(cia => {
+                let escCmt = baseEscalasCmtCia.find(e => e.data === data && e.cia === cia);
+                if(agrupadoPorCia[cia].length === 0 && !escCmt) return; 
+                
+                txt += `🏢 *${cia}*\n------------------------\n`;
+                
+                if(escCmt) {
+                    txt += `⭐ *COMANDANTE DA ${cia}*\n`;
+                    if(escCmt.hIni && escCmt.hFim) txt += `Turno: ${escCmt.hIni} às ${escCmt.hFim}\n`;
+                    if(escCmt.vtr) txt += `VTR: ${escCmt.vtr}\n`;
+                    txt += `👮 Cmt: ${escCmt.cmt}\n`; if(escCmt.mot) txt += `👮 Mot: ${escCmt.mot}\n`;
+                    if(escCmt.tipo === 'Operacional') {
+                        if(escCmt.seg1) txt += `👮 Seg 1: ${escCmt.seg1}\n`;
+                        if(escCmt.seg2) txt += `👮 Seg 2: ${escCmt.seg2}\n`;
+                    }
+                    txt += `\n`;
+                }
+
+                agrupadoPorCia[cia].sort((a, b) => (ordemPelotoes[a.pelotao] || 99) - (ordemPelotoes[b.pelotao] || 99)).forEach(esc => {
+                    txt += `📍 *${esc.pelotao.toUpperCase()}*\n\n`; 
+                    esc.equipes.forEach(eq => { txt += `*${eq.titulo}*\n`; if(eq.horario) txt += `Turno: ${eq.horario}\n`; if(eq.vtr) txt += `VTR: ${eq.vtr}\n`; if(eq.cao) txt += `K9: ${eq.cao}\n`; if(eq.cavalo) txt += `Cavalo: ${eq.cavalo}\n`; eq.pms.forEach(pm => { txt += `👮 ${pm}\n`; }); txt += `\n`; });
+                    if(esc.funcoes && esc.funcoes.length > 0) { txt += `*FUNÇÕES E APOIO*\n`; esc.funcoes.forEach(f => { txt += `🔹 ${f}\n`; }); txt += `\n`; }
+                    
+                    let escaladosNoPelotao = [];
+                    (esc.equipes || []).forEach(eq => (eq.pms || []).forEach(pm => escaladosNoPelotao.push(pm)));
+                    (esc.funcoes || []).forEach(f => escaladosNoPelotao.push(f));
+
+                    let pAtivoUpper = normalizeStr(esc.pelotao); let cmdtPelString = '';
+                    if (pAtivoUpper === '1º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '2º PELOTÃO DE PATRULHAMENTO TÁTICO') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO DE PATRULHAMENTO'; else if (pAtivoUpper === '1º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 1º PELOTÃO SEG AUT'; else if (pAtivoUpper === '2º PEL SEG AUT') cmdtPelString = 'COMANDANTE DO 2º PELOTÃO SEG AUT'; else if (pAtivoUpper === '1º GP MONTADO') cmdtPelString = 'COMANDANTE DO 1º GP MONTADO'; else if (pAtivoUpper === '2º GP CANIL') cmdtPelString = 'COMANDANTE DO 2º GP CANIL'; else if (pAtivoUpper === '3º GP CANIL') cmdtPelString = 'COMANDANTE DO 3º GP CANIL';
+                    
+                    let pmsDoPelotao = [];
+                    if (pAtivoUpper !== 'RESERVA DE ARMAS') {
+                        pmsDoPelotao = baseEfetivo.filter(pm => { let pPel = normalizeStr(pm.pel); return pPel === pAtivoUpper || pPel === normalizeStr(cmdtPelString); });
+                    }
+
+                    let afastadosDoPelotao = []; 
+                    let folgaDoPelotao = [];
+                    
+                    pmsDoPelotao.forEach(pm => { 
+                        let objAfast = baseAfastamentos.find(a => esc.data >= a.dataInicio && esc.data <= a.dataFim && matchPm(pm, a.pmDisplay)); 
+                        let isEscalado = escaladosNoPelotao.some(str => matchPm(pm, str));
+                        if(objAfast) { 
+                            afastadosDoPelotao.push(`🔹 ${pm.posto} ${pm.re} - ${pm.qra} - ${objAfast.tipo}${objAfast.obs ? ` (${objAfast.obs})` : ''}`); 
+                        } else if (!isEscalado) {
+                            folgaDoPelotao.push(`🔹 ${pm.posto} ${pm.re} - ${pm.qra}`);
+                        }
+                    });
+
+                    if(folgaDoPelotao.length > 0) { txt += `*POLICIAIS DE FOLGA*\n`; folgaDoPelotao.forEach(f => { txt += `${f}\n`; }); txt += `\n`; }
+                    if(afastadosDoPelotao.length > 0) { txt += `*AFASTADOS / LEMBRETES*\n`; afastadosDoPelotao.forEach(af => { txt += `${af}\n`; }); txt += `\n`; }
+                });
+            });
+        } return txt;
+    }
+
+function getSelecionadasFromCheckboxes() {
+        let checkboxes = document.querySelectorAll('.check-escala:checked');
+        if(checkboxes.length === 0) return null;
+        let selecionadas = [];
+        
+        checkboxes.forEach(cb => {
+            if(String(cb.value).startsWith('cmt-')) {
+                let id = cb.value.replace('cmt-', '');
+                let escCmt = baseEscalasCmtCia.find(x => x.id == id);
+                if(escCmt) {
+                    selecionadas.push({
+                        data: escCmt.data,
+                        pelotao: escCmt.cia === '1ª CAEP' ? '1º Pelotão de Patrulhamento Tático' : '1º Pel Seg Aut',
+                        equipes: [], funcoes: []
+                    });
+                }
+            } else {
+                let esc = baseEscalas.find(x => x.id == cb.value);
+                if(esc) selecionadas.push(esc);
+            }
+        });
+        return selecionadas;
+    }
+
+    function compartilharWhatsAppSelecionados() { 
+        let selecionadas = getSelecionadasFromCheckboxes();
+        if(!selecionadas) return alert("Selecione pelo menos uma escala."); 
+        
+        let txt = gerarTextoEscalas(selecionadas);
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`, '_blank');
+    }
+
+    function gerarPdfSelecionadas() {
+        let selecionadas = getSelecionadasFromCheckboxes();
+        if(!selecionadas) return alert("Selecione pelo menos uma escala."); 
+        
+        let dataBase = selecionadas[0].data; 
+        gerarRelatorioPadraoPdf(selecionadas, dataBase, `Escalas_Selecionadas_${dataBase}`);
+    }
+function compartilharWhatsAppEscala(id) {
+        let esc = baseEscalas.find(x => x.id == id);
+        if(!esc) return;
+        // Usa a função existente enviando apenas a escala clicada
+        let txt = gerarTextoEscalas([esc]);
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`, '_blank');
+    }
+
+    function gerarPdfEscala(id) {
+        let esc = baseEscalas.find(x => x.id == id);
+        if(!esc) return;
+        let dataFmt = esc.data.split('-').reverse().join('');
+        let nomeArquivo = `Escala_${esc.pelotao.replace(/\s+/g, '_')}_${dataFmt}`;
+        // Usa a função do PDF enviando apenas a escala clicada
+        gerarRelatorioPadraoPdf([esc], esc.data, nomeArquivo);
+    }
+    function renderTabelaHistoricoEscala() {
+        let listaNormal = baseEscalas.map(e => ({ ...e, isCmt: false }));
+        let listaCmt = baseEscalasCmtCia.map(e => ({ ...e, isCmt: true }));
+        let consolidadas = [...listaNormal, ...listaCmt].sort((a,b) => b.data.localeCompare(a.data));
+
+        let html = consolidadas.map(e => {
+            let dataFmt = e.data.split('-').reverse().join('/');
+            let nomePelotao = e.isCmt ? `⭐ Cmt de Cia (${e.cia})` : e.pelotao;
+            let valCheckbox = e.isCmt ? `cmt-${e.id}` : e.id;
+            let btnEdit = e.isCmt ? `editarEscalaCmtCia(${e.id})` : `editarEscala(${e.id})`;
+            let btnDel = e.isCmt ? `deletarEscalaCmtCia(${e.id})` : `deletarEscala(${e.id})`;
+
+            return `<tr>
+                <td style="text-align:center;"><input type="checkbox" class="check-escala" value="${valCheckbox}"></td>
+                <td>${dataFmt}</td>
+                <td>${nomePelotao}</td>
+                <td>
+                    <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                        <button class="btn-sm-edit" onclick="${btnEdit}">ED</button>
+                        <button class="btn-sm-del" onclick="${btnDel}">X</button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+        
+        if(document.getElementById('tabela-historico-escala')) {
+            document.getElementById('tabela-historico-escala').innerHTML = html;
+        }
+    }
+
+    function renderTabelaEfetivo(dados) {
+        let html = dados.map(p => `<tr><td>${p.posto}</td><td>${p.re}</td><td>${p.nome}</td><td>${p.qra}</td><td>${p.pel}</td><td><button class="btn-sm-edit" onclick="editarRecurso('efetivo', ${p.id})">ED</button><button class="btn-sm-del" onclick="deletarRecurso('efetivo', ${p.id})">X</button></td></tr>`).join('');
+        if(document.getElementById('tabela-efetivo')) document.getElementById('tabela-efetivo').innerHTML = html;
+    }
+
+    function filtrarTabelaEfetivo() {
+        let termo = document.getElementById('busca-efetivo-p1').value.toUpperCase();
+        let filtrados = baseEfetivo.filter(p => p.re.includes(termo) || p.nome.includes(termo) || p.qra.includes(termo));
+        renderTabelaEfetivo(filtrados);
+    }
+
+    function atualizarTelas() {
+        let optionsGlobais = baseEfetivo.map(p => `<option value="${p.posto} ${p.re} - ${p.qra}">`).join('');
+        if(document.getElementById('dl-efetivo-global')) document.getElementById('dl-efetivo-global').innerHTML = optionsGlobais;
+        
+        let oficiais = baseEfetivo.filter(p => ['Cel PM','Ten Cel PM','Maj PM','Cap PM','1º Ten PM','2º Ten PM'].includes(p.posto));
+        if(document.getElementById('dl-oficiais-global')) document.getElementById('dl-oficiais-global').innerHTML = oficiais.map(p => `<option value="${p.posto} ${p.re} - ${p.qra}">`).join('');
+
+        let optionsVtr = baseViaturas.map(v => `<option value="${v.prefixo} - ${v.modelo}">`).join('');
+        if(document.getElementById('dl-vtr-global')) document.getElementById('dl-vtr-global').innerHTML = optionsVtr;
+        if(document.getElementById('dl-vtr-global-esc')) document.getElementById('dl-vtr-global-esc').innerHTML = optionsVtr;
+
+        renderTabelaEfetivo(baseEfetivo);
+        atualizarSelectsAfastamento();
+        
+        if(document.getElementById('tabela-afastamentos')) {
+            document.getElementById('tabela-afastamentos').innerHTML = baseAfastamentos.sort((a,b)=>b.dataInicio.localeCompare(a.dataInicio)).map(a => `<tr><td>${a.pmDisplay}</td><td><strong>${a.tipo}</strong><br><span style="font-size:0.75rem; color:#888;">${a.obs||''}</span></td><td>${a.dataInicio.split('-').reverse().join('/')} a ${a.dataFim.split('-').reverse().join('/')}</td><td><button class="btn-sm-edit" onclick="editarRecurso('afast', ${a.id})">ED</button><button class="btn-sm-del" onclick="deletarRecurso('afast', ${a.id})">X</button></td></tr>`).join('');
+        }
+        if(document.getElementById('tabela-viaturas')) document.getElementById('tabela-viaturas').innerHTML = baseViaturas.map(v => `<tr><td>${v.prefixo}</td><td>${v.modelo}</td><td>${v.cia} / ${v.pel}</td><td>${v.tipo}</td><td><button class="btn-sm-edit" onclick="editarRecurso('vtr', ${v.id})">ED</button><button class="btn-sm-del" onclick="deletarRecurso('vtr', ${v.id})">X</button></td></tr>`).join('');
+        if(document.getElementById('tabela-cavalos')) document.getElementById('tabela-cavalos').innerHTML = baseCavalos.map(c => `<tr><td>${c.nome}</td><td>${c.cia} / ${c.pel}</td><td><button class="btn-sm-edit" onclick="editarRecurso('cavalo', ${c.id})">ED</button><button class="btn-sm-del" onclick="deletarRecurso('cavalo', ${c.id})">X</button></td></tr>`).join('');
+        if(document.getElementById('tabela-caes')) document.getElementById('tabela-caes').innerHTML = baseCaes.map(c => `<tr><td>${c.nome}</td><td>${c.cia} / ${c.pel}</td><td><button class="btn-sm-edit" onclick="editarRecurso('cao', ${c.id})">ED</button><button class="btn-sm-del" onclick="deletarRecurso('cao', ${c.id})">X</button></td></tr>`).join('');
+        
+        renderTabelaViagens();
+        renderTabelaViagensEsc();
+        renderTabelaHistoricoEscala();
+        renderTabelaCmtCia();
+        if(document.getElementById('escala-painel-geral').style.display === 'block') atualizarPainelGestao();
+    }
+
+    function consultarSituacaoPM() {
+        let busca = document.getElementById('busca-publica-pm').value.toUpperCase().trim();
+        if(!busca) return alert("Digite o RE ou Nome para buscar.");
+        let pm = baseEfetivo.find(x => x.re.includes(busca) || x.nome.includes(busca) || x.qra.includes(busca));
+        if(!pm) return alert("Policial não encontrado na base de dados.");
+        pmConsultaAtual = pm;
+        
+        let dataAtual = new Date(); dataAtual.setHours(0,0,0,0);
+        let txt = `*SITUAÇÃO DO POLICIAL MILITAR*\n👮 ${pm.posto} ${pm.re} - ${pm.nome}\nCia: ${pm.cia} | Pelotão: ${pm.pel}\n\n*PRÓXIMOS 7 DIAS:*\n`;
+        
+        for(let i=0; i<7; i++) {
+            let d = new Date(dataAtual); d.setDate(d.getDate() + i);
+            let dStr = d.toISOString().split('T')[0];
+            let dFmt = dStr.split('-').reverse().join('/');
+            
+            let isAfastado = baseAfastamentos.find(a => dStr >= a.dataInicio && dStr <= a.dataFim && matchPm(pm, a.pmDisplay));
+            let escalasDoDia = baseEscalas.filter(e => e.data === dStr);
+            let escEncontrada = null; let eqEncontrada = null; let hEncontrado = ''; let funcEncontrada = '';
+            
+            escalasDoDia.forEach(esc => {
+                esc.equipes.forEach(eq => { if(eq.pms.some(str => matchPm(pm, str))) { escEncontrada = esc; eqEncontrada = eq; hEncontrado = eq.horario || "N/I"; } });
+                esc.funcoes.forEach(f => { if(matchPm(pm, f)) { escEncontrada = esc; let match = f.match(/(.*):/); if(match) funcEncontrada = match[1]; } });
+            });
+
+            let cmtEscala = baseEscalasCmtCia.find(e => e.data === dStr && (matchPm(pm, e.cmt) || matchPm(pm, e.mot) || matchPm(pm, e.seg1) || matchPm(pm, e.seg2)));
+
+            if(isAfastado) {
+                txt += `📅 ${dFmt} - 🔴 ${isAfastado.tipo.toUpperCase()} ${isAfastado.obs ? `(${isAfastado.obs})` : ''}\n`;
+            } else if(cmtEscala) {
+                let cargo = matchPm(pm, cmtEscala.cmt) ? "CMT DE CIA" : (matchPm(pm, cmtEscala.mot) ? "MOTORISTA DE CIA" : "SEGURANÇA DE CIA");
+                txt += `📅 ${dFmt} - 🟢 SERVIÇO: ${cargo} (${cmtEscala.hIni||''} às ${cmtEscala.hFim||''}) - VTR: ${cmtEscala.vtr||'N/I'}\n`;
+            } else if(escEncontrada) {
+                if(funcEncontrada) {
+                    txt += `📅 ${dFmt} - 🟢 SERVIÇO: ${funcEncontrada.toUpperCase()} (${escEncontrada.pelotao})\n`;
+                } else if(eqEncontrada) {
+                    txt += `📅 ${dFmt} - 🟢 SERVIÇO: ${eqEncontrada.titulo.toUpperCase()} (${escEncontrada.pelotao}) - Horário: ${hEncontrado}\n`;
+                }
+            } else {
+                txt += `📅 ${dFmt} - ⚪ FOLGA / SEM ESCALA LANÇADA\n`;
+            }
+        }
+        textoConsultaSituacaoAtual = txt;
+        document.getElementById('resultado-situacao').innerText = txt.replace(/\*/g, '');
+        document.getElementById('acoes-situacao').style.display = 'flex';
+    }
+    
+    function enviarWhatsAppSituacao() { window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(textoConsultaSituacaoAtual)}`, '_blank'); }
+    
+    function gerarPdfSituacao() {
+        const { jsPDF } = window.jspdf; const doc = new jsPDF();
+        doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.text("SITUAÇÃO ADMINISTRATIVA / OPERACIONAL", 105, 20, { align: "center" }); doc.setLineWidth(0.5); doc.line(10, 25, 200, 25);
+        doc.setFontSize(10); doc.setFont("helvetica", "normal");
+        let y = 35; let linhas = textoConsultaSituacaoAtual.replace(/\*/g, '').split('\n');
+        linhas.forEach(l => { doc.text(l, 15, y); y += 7; });
+        doc.save(`Situacao_${pmConsultaAtual.re}.pdf`);
+    }
+
+    function consultarEscalaGeral() {
+        let data = document.getElementById('data-consulta-escala').value;
+        let pel = document.getElementById('pel-consulta-escala').value;
+        if(!data) return alert("Selecione a data para consultar.");
+        dataConsultaEscalaAtual = data;
+        
+        let escalasFiltradas = baseEscalas.filter(e => e.data === data);
+        if(pel !== 'TODOS') escalasFiltradas = escalasFiltradas.filter(e => e.pelotao === pel);
+        
+        if(escalasFiltradas.length === 0 && pel !== 'TODOS') return alert("Nenhuma escala encontrada para este pelotão nesta data.");
+        
+        let txt = gerarTextoEscalas(escalasFiltradas);
+        textoConsultaEscalaGeralAtual = txt;
+        document.getElementById('resultado-escala-geral').innerText = txt.replace(/\*/g, '');
+        document.getElementById('acoes-escala-geral').style.display = 'flex';
+    }
+
+    function enviarWhatsAppEscalaGeral() { window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(textoConsultaEscalaGeralAtual)}`, '_blank'); }
+    
+    function gerarPdfEscalaGeral() {
+        let data = document.getElementById('data-consulta-escala').value;
+        let pel = document.getElementById('pel-consulta-escala').value;
+        let escalasFiltradas = baseEscalas.filter(e => e.data === data);
+        if(pel !== 'TODOS') escalasFiltradas = escalasFiltradas.filter(e => e.pelotao === pel);
+        gerarRelatorioPadraoPdf(escalasFiltradas, data, `Escala_Diaria_${data}`);
+    }
+
+    function exportarTabela(nomePlanilha, cabecalhos, dados, tipo) {
+        if(tipo === 'excel') {
+            let ws = XLSX.utils.json_to_sheet(dados, {header: Object.keys(dados[0]||{})});
+            XLSX.utils.sheet_add_aoa(ws, [cabecalhos], {origin: "A1"});
+            let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, nomePlanilha);
+            XLSX.writeFile(wb, `${nomePlanilha}.xlsx`);
+        } else if(tipo === 'pdf') {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
+            doc.text(`Relatório de ${nomePlanilha}`, 14, 15);
+            let mapData = dados.map(obj => Object.values(obj).map(v => String(v).substring(0, 50)));
+            doc.autoTable({ head: [cabecalhos], body: mapData, startY: 25, styles: {fontSize: 8} });
+            doc.save(`${nomePlanilha}.pdf`);
+        }
+    }
+</script>
+</body>
+</html>
+
