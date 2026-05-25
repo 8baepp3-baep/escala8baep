@@ -4,7 +4,15 @@ async function testarSupabase() {
 
     const { data, error } = await supabaseClient
         .from('policiais')
-        .select('*');
+        .insert([
+            {
+                nome: 'TESTE SISTEMA',
+                re: '123456',
+                posto: 'CB PM',
+                pelotao: '1º Pel Tático'
+            }
+        ])
+        .select();
 
     if (error) {
 
@@ -12,7 +20,7 @@ async function testarSupabase() {
 
     } else {
 
-        console.log('Conectado ao Supabase:', data);
+        console.log('Registro inserido:', data);
 
     }
 }
