@@ -714,7 +714,13 @@ function obterPmsEscaladosNoDia(data, idEscalaAtual) {
         return false;
     }
 
-    async function inicializarSistema() { 
+    async function inicializarSistema() {
+
+    console.log("Sistema iniciado");
+
+    document.getElementById('portal').style.display = 'block';
+
+} 
         await carregarLocal();
         document.getElementById('dash-date-filter').value = new Date().toISOString().split('T')[0];
         atualizarTelas();
@@ -722,7 +728,11 @@ function obterPmsEscaladosNoDia(data, idEscalaAtual) {
 
     async function carregarLocal() {
         try {
-            const response = await // integração antiga removida;
+            async function carregarLocal() {
+
+    console.log("Sistema iniciado");
+
+}
             if (response.ok) {
                 const dbData = await response.json();
                 if (Object.keys(dbData).length > 0) {
@@ -2371,6 +2381,39 @@ function compartilharWhatsAppEscala(id) {
             doc.save(`${nomePlanilha}.pdf`);
         }
     }
+    function prepararLogin(tipo) {
+
+    if (tipo === 'gestor') {
+
+        verTela('moduloP1');
+
+    } else if (tipo === 'escalante') {
+
+        verTela('moduloEscala');
+
+    }
+
+}
+
+function verTela(idTela) {
+
+    document.querySelectorAll('.page').forEach(tela => {
+
+        tela.classList.remove('active');
+        tela.style.display = 'none';
+
+    });
+
+    const tela = document.getElementById(idTela);
+
+    if (tela) {
+
+        tela.classList.add('active');
+        tela.style.display = 'block';
+
+    }
+
+}
 </script>
 </body>
 </html>
