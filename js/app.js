@@ -1,12 +1,20 @@
-// CONFIGURAÇÃO SUPABASE
+console.log('Sistema iniciado');
 
-const SUPABASE_URL = 'https://jnkpwwsygtrhoawzpncn.supabase.co';
+async function testarSupabase() {
 
-const SUPABASE_KEY = 'SUA_CHAVE';
+    const { data, error } = await supabaseClient
+        .from('policiais')
+        .select('*');
 
-const supabaseClient = supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
+    if (error) {
 
-console.log('Supabase conectado');
+        console.error('Erro Supabase:', error);
+
+    } else {
+
+        console.log('Conectado ao Supabase:', data);
+
+    }
+}
+
+testarSupabase();
