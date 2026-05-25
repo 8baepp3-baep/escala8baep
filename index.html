@@ -720,103 +720,84 @@ function obterPmsEscaladosNoDia(data, idEscalaAtual) {
 
     document.getElementById('portal').style.display = 'block';
 
-} 
-        await carregarLocal();
-        document.getElementById('dash-date-filter').value = new Date().toISOString().split('T')[0];
-        atualizarTelas();
-    }
+    await carregarLocal();
 
-    async function carregarLocal() {
-        try {
-            async function carregarLocal() {
+    document.getElementById('dash-date-filter').value =
+        new Date().toISOString().split('T')[0];
 
-    console.log("Sistema iniciado");
+    atualizarTelas();
 
 }
-            if (response.ok) {
-                const dbData = await response.json();
-                if (Object.keys(dbData).length > 0) {
-                    baseEfetivo = dbData.efetivo || []; baseAfastamentos = dbData.afastamentos || []; baseViaturas = dbData.viaturas || [];
-                    baseCavalos = dbData.cavalos || []; baseCaes = dbData.caes || []; baseEscalas = dbData.escalas || [];
-                    baseTiposAfast = dbData.tipos_afast || []; baseAvisosPainel = dbData.avisos || []; baseViagens = dbData.viagens || [];
-                    baseEscalasCmtCia = dbData.escalas_cmt_cia || []; 
-                    console.log("✅ Dados carregados EXCLUSIVAMENTE do Banco MySQL com sucesso!");
-                    return; 
-                }
-            }
-        } catch (error) {
-            console.error("⚠️ Servidor offline ou erro de rede.", error);
+
+async function carregarLocal() {
+
+    console.log("Carregando dados locais");
+
+    try {
+
+        const dadosOffline =
+            localStorage.getItem('baep_dados_offline');
+
+        if (dadosOffline) {
+
+            const dbData = JSON.parse(dadosOffline);
+
+            baseEfetivo = dbData.efetivo || [];
+            baseAfastamentos = dbData.afastamentos || [];
+            baseViaturas = dbData.viaturas || [];
+            baseCavalos = dbData.cavalos || [];
+            baseCaes = dbData.caes || [];
+            baseEscalas = dbData.escalas || [];
+            baseTiposAfast = dbData.tipos_afast || [];
+            baseAvisosPainel = dbData.avisos || [];
+            baseViagens = dbData.viagens || [];
+            baseEscalasCmtCia = dbData.escalas_cmt_cia || [];
+
+            console.log("Dados carregados");
+
         }
-        baseEfetivo = []; baseViaturas = []; baseCavalos = []; baseCaes = []; baseEscalas = []; baseAfastamentos = []; baseAvisosPainel = []; baseViagens = []; baseEscalasCmtCia = [];
-        baseTiposAfast = [{nome: 'Serviço (Externo)', bloqueia: true}, {nome: 'Folga Mensal', bloqueia: true}, {nome: 'Férias', bloqueia: true}, {nome: 'Viagem', bloqueia: true}, {nome: 'Licença Saúde (LSV)', bloqueia: true}, {nome: 'Restrição de Serviço', bloqueia: true}];
+
+    } catch (erro) {
+
+        console.error("Erro ao carregar dados:", erro);
+
     }
 
-async function salvarLocal(forcarSobrescrita = false) {
-        // Declaramos a variável fora do try para que o catch consiga acessá-la caso dê erro
-        let dadosParaSalvar = {}; 
+}
 
-        try {
-            if (!forcarSobrescrita) {
-                const getRes = await fetch('/api/sync');
-                if (getRes.ok) {
-                    const dbAtualizado = await getRes.json();
-                    const mesclarPorId = (localArray, dbArray) => {
-                        if (!dbArray) return localArray;
-                        let mapLocal = new Map(localArray.map(item => [item.id, item]));
-                        dbArray.forEach(dbItem => {
-                            if (!mapLocal.has(dbItem.id)) { localArray.push(dbItem); }
-                        });
-                        return localArray;
-                    };
-                    baseEfetivo = mesclarPorId(baseEfetivo, dbAtualizado.efetivo);
-                    baseAfastamentos = mesclarPorId(baseAfastamentos, dbAtualizado.afastamentos);
-                    baseViaturas = mesclarPorId(baseViaturas, dbAtualizado.viaturas);
-                    baseCavalos = mesclarPorId(baseCavalos, dbAtualizado.cavalos);
-                    baseCaes = mesclarPorId(baseCaes, dbAtualizado.caes);
-                    baseEscalas = mesclarPorId(baseEscalas, dbAtualizado.escalas);
-                    baseViagens = mesclarPorId(baseViagens, dbAtualizado.viagens);
-                    baseEscalasCmtCia = mesclarPorId(baseEscalasCmtCia, dbAtualizado.escalas_cmt_cia);
-                }
-            }
+async function salvarLocal() {
 
-            // Popula os dados após uma possível mescla com o banco
-            dadosParaSalvar = { 
-                efetivo: baseEfetivo, afastamentos: baseAfastamentos, viaturas: baseViaturas, 
-                cavalos: baseCavalos, caes: baseCaes, escalas: baseEscalas, 
-                tipos_afast: baseTiposAfast, avisos: baseAvisosPainel, viagens: baseViagens,
-                escalas_cmt_cia: baseEscalasCmtCia 
-            };
-            
-            const response = await fetch('/api/sync', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(dadosParaSalvar) 
-            });
-            
-            if (!response.ok) { 
-                alert("⚠️ ERRO CRÍTICO: O servidor recusou a gravação. Contate o TI."); 
-            } else { 
-                console.log("💾 Salvo no Banco MySQL com sucesso!"); 
-            }
+    try {
 
-        } catch (error) { 
-            console.log("⚠️ Servidor inacessível. Salvando no storage local (fallback offline)"); 
-            
-            // Se o erro aconteceu antes da variável ser preenchida, nós preenchemos ela agora
-            if (Object.keys(dadosParaSalvar).length === 0) {
-                dadosParaSalvar = { 
-                    efetivo: baseEfetivo, afastamentos: baseAfastamentos, viaturas: baseViaturas, 
-                    cavalos: baseCavalos, caes: baseCaes, escalas: baseEscalas, 
-                    tipos_afast: baseTiposAfast, avisos: baseAvisosPainel, viagens: baseViagens,
-                    escalas_cmt_cia: baseEscalasCmtCia 
-                };
-            }
+        const dadosParaSalvar = {
 
-            // Grava os dados no navegador do usuário
-            localStorage.setItem('baep_dados_offline', JSON.stringify(dadosParaSalvar));
-        }
+            efetivo: baseEfetivo,
+            afastamentos: baseAfastamentos,
+            viaturas: baseViaturas,
+            cavalos: baseCavalos,
+            caes: baseCaes,
+            escalas: baseEscalas,
+            tipos_afast: baseTiposAfast,
+            avisos: baseAvisosPainel,
+            viagens: baseViagens,
+            escalas_cmt_cia: baseEscalasCmtCia
+
+        };
+
+        localStorage.setItem(
+            'baep_dados_offline',
+            JSON.stringify(dadosParaSalvar)
+        );
+
+        console.log("Dados salvos");
+
+    } catch (erro) {
+
+        console.error("Erro ao salvar:", erro);
+
     }
 
+}
     function abrirModalCadastroPM() {
         document.getElementById('cad-pm-re').value = ''; document.getElementById('cad-pm-nome').value = ''; document.getElementById('cad-pm-qra').value = '';
         document.getElementById('modalCadastroPMRapido').style.display = 'block';
@@ -2404,16 +2385,105 @@ function verTela(idTela) {
 
     });
 
-    const tela = document.getElementById(idTela);
+  function prepararLogin(tipo) {
 
-    if (tela) {
+    document.getElementById('login').style.display = 'block';
 
-        tela.classList.add('active');
-        tela.style.display = 'block';
+    verTela('login');
+
+    document.getElementById('loginDestino').value = tipo;
+
+}
+
+function verTela(idTela) {
+
+    document.querySelectorAll('.page').forEach(tela => {
+
+        tela.classList.remove('active');
+
+        tela.style.display = 'none';
+
+    });
+
+    const telaSelecionada = document.getElementById(idTela);
+
+    if (telaSelecionada) {
+
+        telaSelecionada.classList.add('active');
+
+        telaSelecionada.style.display = 'block';
 
     }
 
 }
+
+function fazerLogout() {
+
+    verTela('portal');
+
+    document.getElementById('nav-p1').style.display = 'none';
+
+    document.getElementById('nav-p3').style.display = 'none';
+
+    document.getElementById('btn-logout').style.display = 'none';
+
+    document.getElementById('btn-login-p1').style.display = 'inline-block';
+
+    document.getElementById('btn-login-esc').style.display = 'inline-block';
+
+}
+
+function autenticar() {
+
+    const destino =
+        document.getElementById('loginDestino').value;
+
+    if (destino === 'gestor') {
+
+        document.getElementById('nav-p1').style.display = 'inline-block';
+
+        verTela('moduloP1');
+
+    } else {
+
+        document.getElementById('nav-p3').style.display = 'inline-block';
+
+        verTela('moduloEscala');
+
+    }
+
+    document.getElementById('btn-logout').style.display = 'inline-block';
+
+    document.getElementById('btn-login-p1').style.display = 'none';
+
+    document.getElementById('btn-login-esc').style.display = 'none';
+
+}
+
+    const destino =
+        document.getElementById('loginDestino').value;
+
+    if (destino === 'gestor') {
+
+        document.getElementById('nav-p1').style.display = 'inline-block';
+
+        verTela('moduloP1');
+
+    } else {
+
+        document.getElementById('nav-p3').style.display = 'inline-block';
+
+        verTela('moduloEscala');
+
+    }
+
+    document.getElementById('btn-logout').style.display = 'inline-block';
+
+    document.getElementById('btn-login-p1').style.display = 'none';
+
+    document.getElementById('btn-login-esc').style.display = 'none';
+
+} 
 </script>
 </body>
 </html>
