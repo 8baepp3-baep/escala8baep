@@ -2378,12 +2378,41 @@ function compartilharWhatsAppEscala(id) {
 
 function verTela(idTela) {
 
-    document.querySelectorAll('.page').forEach(tela => {
+    const paginasPrincipais = [
 
-        tela.classList.remove('active');
-        tela.style.display = 'none';
+        'portal',
+        'login',
+        'moduloP1',
+        'moduloEscala'
+
+    ];
+
+    paginasPrincipais.forEach(id => {
+
+        const tela = document.getElementById(id);
+
+        if (tela) {
+
+            tela.style.display = 'none';
+
+            tela.classList.remove('active');
+
+        }
 
     });
+
+    const telaSelecionada =
+        document.getElementById(idTela);
+
+    if (telaSelecionada) {
+
+        telaSelecionada.style.display = 'block';
+
+        telaSelecionada.classList.add('active');
+
+    }
+
+}
 
   function prepararLogin(tipo) {
 
@@ -2440,48 +2469,37 @@ function autenticar() {
 
     if (destino === 'gestor') {
 
-        document.getElementById('nav-p1').style.display = 'inline-block';
+        document.getElementById('nav-p1').style.display =
+            'inline-block';
+
+        document.getElementById('nav-p3').style.display =
+            'none';
 
         verTela('moduloP1');
 
-    } else {
+    }
 
-        document.getElementById('nav-p3').style.display = 'inline-block';
+    if (destino === 'escalante') {
+
+        document.getElementById('nav-p3').style.display =
+            'inline-block';
+
+        document.getElementById('nav-p1').style.display =
+            'none';
 
         verTela('moduloEscala');
 
     }
 
-    document.getElementById('btn-logout').style.display = 'inline-block';
+    document.getElementById('btn-logout').style.display =
+        'inline-block';
 
-    document.getElementById('btn-login-p1').style.display = 'none';
+    document.getElementById('btn-login-p1').style.display =
+        'none';
 
-    document.getElementById('btn-login-esc').style.display = 'none';
+    document.getElementById('btn-login-esc').style.display =
+        'none';
 
-}
-
-    const destino =
-        document.getElementById('loginDestino').value;
-
-    if (destino === 'gestor') {
-
-        document.getElementById('nav-p1').style.display = 'inline-block';
-
-        verTela('moduloP1');
-
-    } else {
-
-        document.getElementById('nav-p3').style.display = 'inline-block';
-
-        verTela('moduloEscala');
-
-    }
-
-    document.getElementById('btn-logout').style.display = 'inline-block';
-
-    document.getElementById('btn-login-p1').style.display = 'none';
-
-    document.getElementById('btn-login-esc').style.display = 'none';
 
 } 
 </script>
