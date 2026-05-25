@@ -51,3 +51,8 @@ function inicializarSistema() {
     console.log('Sistema inicializado');
 
 }
+function prepararLogin(tipo) {
+
+    alert('Login em desenvolvimento: ' + tipo);
+
+}
